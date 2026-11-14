@@ -3,7 +3,6 @@ package com.levelup.app.ui.components
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -17,12 +16,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -34,79 +35,102 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.res.ResourcesCompat
 import com.levelup.app.R
 import com.levelup.app.domain.ActivityChartMath
-import com.levelup.app.ui.theme.LvAccent
-import com.levelup.app.ui.theme.LvBg
-import com.levelup.app.ui.theme.LvBorder
-import com.levelup.app.ui.theme.LvMuted
-import com.levelup.app.ui.theme.LvSurface
-import com.levelup.app.ui.theme.LvText
-import com.levelup.app.ui.theme.Mono
+import com.levelup.app.ui.theme.C
+import com.levelup.app.ui.theme.T
 import kotlin.math.roundToInt
 
+private const val PLOT_HEIGHT_DP = 110f
+private const val TOTAL_HEIGHT_DP = 126f
+
 /**
- * Curved activity chart used by the app. Values are percentages (0..100), labels
- * are real weekday initials or W1..W4. Draws in left to right and supports a
- * press/drag tooltip without introducing any Material chrome.
+ * Monotone curved activity graph. The plot is 110 dp high with another 16 dp
+ * below it for labels. Geometry comes from ActivityChartMath, which clamps all
+ * Fritsch-Carlson control points to the plot.
  */
 @Composable
 fun ActivityLineChart(
     values: List<Float>,
     labels: List<String>,
     modifier: Modifier = Modifier,
-    height: Dp = 110.dp,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     var selected by remember(values, labels) { mutableStateOf<Int?>(null) }
-    val drawProgress = remember { Animatable(0f) }
-    val typeface = remember {
+    val reveal = remember { Animatable(0f) }
+    val monoTypeface = remember {
         ResourcesCompat.getFont(context, R.font.jetbrains_mono_regular) ?: Typeface.MONOSPACE
     }
-    val labelPaint = remember(density, typeface) {
+    val sansTypeface = remember {
+        ResourcesCompat.getFont(context, R.font.inter_regular) ?: Typeface.SANS_SERIF
+    }
+    val yPaint = remember(density, monoTypeface) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            this.typeface = typeface
-            textSize = with(density) { 11.sp.toPx() }
-            color = LvMuted.toArgb()
+            typeface = monoTypeface
+            textSize = with(density) { T.Label11.fontSize.toPx() }
+            color = C.Muted.toArgb()
+            fontFeatureSettings = "tnum"
         }
     }
-    val tooltipPaint = remember(density, typeface) {
+    val xPaint = remember(density, sansTypeface) {
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            this.typeface = typeface
-            textSize = with(density) { 12.sp.toPx() }
-            color = LvText.toArgb()
+            typeface = sansTypeface
+            textSize = with(density) { T.Body11Muted.fontSize.toPx() }
+            color = C.Muted.toArgb()
         }
     }
-    val emptyMessage = androidx.compose.ui.res.stringResource(R.string.activity_empty)
+    val xLastPaint = remember(density, sansTypeface) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = sansTypeface
+            textSize = with(density) { T.Body11Muted.fontSize.toPx() }
+            color = C.Text.toArgb()
+        }
+    }
+    val emptyPaint = remember(density, sansTypeface) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = sansTypeface
+            textSize = with(density) { T.Body12Muted.fontSize.toPx() }
+            color = C.Muted.toArgb()
+            textAlign = Paint.Align.CENTER
+        }
+    }
+    val tooltipPaint = remember(density, monoTypeface) {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = monoTypeface
+            textSize = with(density) { T.Mono12.fontSize.toPx() }
+            color = C.Text.toArgb()
+            fontFeatureSettings = "tnum"
+        }
+    }
+    val emptyText = stringResource(R.string.activity_empty)
 
     LaunchedEffect(values, labels) {
-        drawProgress.snapTo(0f)
-        drawProgress.animateTo(1f, tween(800, easing = FastOutSlowInEasing))
+        reveal.snapTo(0f)
+        reveal.animateTo(1f, tween(800))
     }
 
-    fun chartRect(width: Float, heightPx: Float): Rect {
-        val left = with(density) { 26.dp.toPx() }
-        val right = (width - with(density) { 12.dp.toPx() }).coerceAtLeast(left + 1f)
-        val top = with(density) { 14.dp.toPx() }
-        val bottom = (heightPx - with(density) { 20.dp.toPx() }).coerceAtLeast(top + 1f)
+    fun plotRect(width: Float, heightPx: Float): Rect {
+        val left = with(density) { 22.dp.toPx() }
+        val right = (width - with(density) { 8.dp.toPx() }).coerceAtLeast(left + 1f)
+        val top = with(density) { 6.dp.toPx() }
+        val bottom = (with(density) { PLOT_HEIGHT_DP.dp.toPx() } - with(density) { 4.dp.toPx() })
+            .coerceAtLeast(top + 1f)
         return Rect(left, top, right, bottom)
     }
 
     fun nearest(x: Float, width: Float, heightPx: Float): Int {
-        val rect = chartRect(width, heightPx)
+        val rect = plotRect(width, heightPx)
         return ActivityChartMath.nearestIndex(x, values.size, rect.left, rect.right)
     }
 
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(height)
+            .height(TOTAL_HEIGHT_DP.dp)
             .pointerInput(values, labels) {
                 detectTapGestures(
                     onPress = { offset ->
@@ -134,10 +158,10 @@ fun ActivityLineChart(
                 )
             },
     ) {
-        val rect = chartRect(size.width, size.height)
-        drawGrid(rect, labelPaint, values.isNotEmpty())
+        val rect = plotRect(size.width, size.height)
+        drawGrid(rect, yPaint)
         if (values.size < 2) {
-            drawEmptyChart(rect, labelPaint, emptyMessage)
+            drawEmpty(rect, emptyPaint, emptyText)
             return@Canvas
         }
 
@@ -148,7 +172,7 @@ fun ActivityLineChart(
             top = rect.top,
             bottom = rect.bottom,
         )
-        val linePath = Path().apply {
+        val line = Path().apply {
             moveTo(segments.first().startX, segments.first().startY)
             segments.forEach { segment ->
                 cubicTo(
@@ -158,7 +182,7 @@ fun ActivityLineChart(
                 )
             }
         }
-        val areaPath = Path().apply {
+        val area = Path().apply {
             moveTo(segments.first().startX, rect.bottom)
             lineTo(segments.first().startX, segments.first().startY)
             segments.forEach { segment ->
@@ -173,78 +197,76 @@ fun ActivityLineChart(
         }
 
         drawPath(
-            path = areaPath,
+            path = area,
             brush = Brush.verticalGradient(
-                colors = listOf(LvAccent.copy(alpha = 0.28f), Color.Transparent),
+                colors = listOf(C.Red.copy(alpha = 0.28f), Color.Transparent),
                 startY = rect.top,
                 endY = rect.bottom,
             ),
-            alpha = drawProgress.value,
+            alpha = reveal.value,
         )
 
-        if (drawProgress.value > 0f) {
-            val measure = PathMeasure()
-            measure.setPath(linePath, false)
+        if (reveal.value > 0f) {
+            val source = PathMeasure().apply { setPath(line, false) }
             val visible = Path()
-            val length = measure.length
-            if (length > 0f) {
-                measure.getSegment(0f, length * drawProgress.value, visible, true)
-                drawPath(
-                    path = visible,
-                    color = LvAccent,
-                    style = Stroke(
-                        width = 2.5.dp.toPx(),
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round,
-                    ),
-                )
-            }
+            source.getSegment(0f, source.length * reveal.value, visible, true)
+            drawPath(
+                path = visible,
+                color = C.Red,
+                style = Stroke(
+                    width = 2.5.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                ),
+            )
         }
 
-        val revealIndex = (drawProgress.value * (values.size - 1)).toInt()
+        val shown = reveal.value * (values.lastIndex.toFloat())
         values.forEachIndexed { index, value ->
-            if (index > revealIndex + 0) return@forEachIndexed
-            val point = Offset(
+            if (index.toFloat() > shown + 0.001f) return@forEachIndexed
+            val offset = Offset(
                 ActivityChartMath.xFor(index, values.size, rect.left, rect.right),
                 ActivityChartMath.yFor(value, rect.top, rect.bottom),
             )
-            val latest = index == values.lastIndex
-            if (latest) {
+            if (index == values.lastIndex) {
                 drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(LvAccent.copy(alpha = 0.3f), Color.Transparent),
-                        center = point,
-                        radius = 9.dp.toPx(),
-                    ),
+                    color = C.Red.copy(alpha = 0.25f),
                     radius = 9.dp.toPx(),
-                    center = point,
+                    center = offset,
                 )
-                drawCircle(color = LvText, radius = 3.5.dp.toPx(), center = point)
+                drawCircle(color = C.Text, radius = 4.dp.toPx(), center = offset)
+                drawCircle(
+                    color = C.Red,
+                    radius = 4.dp.toPx(),
+                    center = offset,
+                    style = Stroke(width = 1.5.dp.toPx()),
+                )
             } else {
-                drawCircle(color = LvBg, radius = 2.5.dp.toPx(), center = point)
+                drawCircle(color = C.Bg, radius = 2.5.dp.toPx(), center = offset)
+                drawCircle(
+                    color = C.Red,
+                    radius = 2.5.dp.toPx(),
+                    center = offset,
+                    style = Stroke(width = 1.5.dp.toPx()),
+                )
             }
-            drawCircle(
-                color = LvAccent,
-                radius = if (latest) 3.5.dp.toPx() else 2.5.dp.toPx(),
-                center = point,
-                style = Stroke(width = 1.5.dp.toPx()),
-            )
         }
 
-        drawXLabels(rect, values, labels, labelPaint)
+        drawXLabels(rect, values, labels, xPaint, xLastPaint)
         selected?.let { index ->
-            drawSelection(rect, values, labels, index, tooltipPaint)
+            if (index in values.indices) {
+                drawSelection(rect, values, labels, index, tooltipPaint)
+            }
         }
     }
 }
 
-private fun DrawScope.drawGrid(rect: Rect, paint: Paint, hasData: Boolean) {
+private fun DrawScope.drawGrid(rect: Rect, paint: Paint) {
     val canvas = drawContext.canvas.nativeCanvas
-    val rows = listOf(0f, 50f, 100f)
-    rows.forEach { value ->
+    listOf(0f, 50f, 100f).forEach { value ->
         val y = ActivityChartMath.yFor(value, rect.top, rect.bottom)
         drawLine(
-            color = LvBorder,
+            color = C.Border,
             start = Offset(rect.left, y),
             end = Offset(rect.right, y),
             strokeWidth = 0.5.dp.toPx(),
@@ -260,29 +282,30 @@ private fun DrawScope.drawXLabels(
     values: List<Float>,
     labels: List<String>,
     paint: Paint,
+    lastPaint: Paint,
 ) {
-    if (values.isEmpty()) return
     val canvas = drawContext.canvas.nativeCanvas
-    paint.textAlign = Paint.Align.CENTER
+    val baseline = size.height - 4.dp.toPx()
     labels.forEachIndexed { index, label ->
         if (index >= values.size) return@forEachIndexed
         val x = ActivityChartMath.xFor(index, values.size, rect.left, rect.right)
-        canvas.drawText(label, x, size.height - 4.dp.toPx(), paint)
+        val labelPaint = if (index == values.lastIndex) lastPaint else paint
+        labelPaint.textAlign = Paint.Align.CENTER
+        canvas.drawText(label, x, baseline, labelPaint)
     }
 }
 
-private fun DrawScope.drawEmptyChart(rect: Rect, paint: Paint, message: String) {
-    val y = (rect.top + rect.bottom) / 2f
+private fun DrawScope.drawEmpty(rect: Rect, paint: Paint, message: String) {
+    val y = ActivityChartMath.yFor(0f, rect.top, rect.bottom)
     drawLine(
-        color = LvMuted,
+        color = C.Muted,
         start = Offset(rect.left, y),
         end = Offset(rect.right, y),
         strokeWidth = 1.5.dp.toPx(),
-        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+        pathEffect = PathEffect.dashPathEffect(
             floatArrayOf(4.dp.toPx(), 5.dp.toPx()),
         ),
     )
-    paint.textAlign = Paint.Align.CENTER
     drawContext.canvas.nativeCanvas.drawText(
         message,
         (rect.left + rect.right) / 2f,
@@ -301,48 +324,52 @@ private fun DrawScope.drawSelection(
     val x = ActivityChartMath.xFor(index, values.size, rect.left, rect.right)
     val y = ActivityChartMath.yFor(values[index], rect.top, rect.bottom)
     drawLine(
-        color = LvAccent.copy(alpha = 0.45f),
+        color = C.Muted,
         start = Offset(x, rect.top),
         end = Offset(x, rect.bottom),
         strokeWidth = 0.5.dp.toPx(),
     )
-    drawCircle(color = LvText, radius = 4.dp.toPx(), center = Offset(x, y))
+    drawCircle(color = C.Text, radius = 4.dp.toPx(), center = Offset(x, y))
     drawCircle(
-        color = LvAccent,
+        color = C.Red,
         radius = 4.dp.toPx(),
         center = Offset(x, y),
         style = Stroke(width = 1.5.dp.toPx()),
     )
 
     val text = "${labels.getOrElse(index) { "" }}  ${values[index].roundToInt()}%"
-    val horizontalPadding = 6.dp.toPx()
-    val pillHeight = 20.dp.toPx()
+    val horizontal = 8.dp.toPx()
+    val vertical = 4.dp.toPx()
     val textWidth = textPaint.measureText(text)
-    val pillWidth = textWidth + horizontalPadding * 2f
-    val pillLeft = (x - pillWidth / 2f).coerceIn(0f, size.width - pillWidth)
-    val above = y - pillHeight - 6.dp.toPx()
-    val pillTop = (if (above >= 0f) above else y + 6.dp.toPx())
+    val pillWidth = textWidth + horizontal * 2f
+    val textHeight = textPaint.descent() - textPaint.ascent()
+    val pillHeight = textHeight + vertical * 2f
+    val left = (x - pillWidth / 2f).coerceIn(0f, (size.width - pillWidth).coerceAtLeast(0f))
+    val above = y - pillHeight - 4.dp.toPx()
+    val top = (if (above >= 0f) above else y + 4.dp.toPx())
         .coerceIn(0f, (size.height - pillHeight).coerceAtLeast(0f))
-    val pillRect = Rect(pillLeft, pillTop, pillLeft + pillWidth, pillTop + pillHeight)
+    val corner = CornerRadius(8.dp.toPx())
     drawRoundRect(
-        color = LvSurface,
-        topLeft = Offset(pillRect.left, pillRect.top),
-        size = Size(pillRect.width, pillRect.height),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()),
+        color = C.Surface,
+        topLeft = Offset(left, top),
+        size = Size(pillWidth, pillHeight),
+        cornerRadius = corner,
     )
     drawRoundRect(
-        color = LvBorder,
-        topLeft = Offset(pillRect.left, pillRect.top),
-        size = Size(pillRect.width, pillRect.height),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()),
+        color = C.Border,
+        topLeft = Offset(left, top),
+        size = Size(pillWidth, pillHeight),
+        cornerRadius = corner,
         style = Stroke(width = 0.5.dp.toPx()),
     )
-    val baseline = pillRect.top + (pillRect.height - (textPaint.descent() + textPaint.ascent())) / 2f
     textPaint.textAlign = Paint.Align.CENTER
-    drawContext.canvas.nativeCanvas.drawText(
-        text,
-        pillRect.center.x,
-        baseline,
-        textPaint,
-    )
+    val baseline = top + vertical - textPaint.ascent()
+    drawIntoCanvas { _ ->
+        drawContext.canvas.nativeCanvas.drawText(
+            text,
+            left + pillWidth / 2f,
+            baseline,
+            textPaint,
+        )
+    }
 }

@@ -6,12 +6,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -20,19 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.levelup.app.R
-import com.levelup.app.ui.theme.LvAccent
-import com.levelup.app.ui.theme.LvMuted
-import com.levelup.app.ui.theme.LvText
-import com.levelup.app.ui.theme.Mono
+import com.levelup.app.ui.components.AppText
+import com.levelup.app.ui.theme.C
+import com.levelup.app.ui.theme.T
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
@@ -43,18 +39,14 @@ private data class ConfettiPiece(
     val duration: Float,
     val spin: Float,
     val sway: Float,
-    val color: Color,
+    val color: androidx.compose.ui.graphics.Color,
 )
 
-/**
- * Equivalent of party() in the prototype: a red inner glow, twenty falling pieces
- * in red / off-white / grey and a centred "Minimum done." message.
- */
 @Composable
 fun CelebrationOverlay(streak: Int, onFinished: () -> Unit) {
     val progress = remember { Animatable(0f) }
-    val palette = listOf(LvAccent, LvText, LvMuted)
     val pieces = remember {
+        val palette = listOf(C.Red, C.Text, C.Muted)
         List(20) { index ->
             ConfettiPiece(
                 x = Random.nextFloat(),
@@ -73,7 +65,7 @@ fun CelebrationOverlay(streak: Int, onFinished: () -> Unit) {
     }
 
     val p = progress.value
-    val glow = (sin(p * PI).toFloat()).coerceIn(0f, 1f)
+    val glow = sin(p * PI).toFloat().coerceIn(0f, 1f)
     val textAlpha = when {
         p < 0.12f -> p / 0.12f
         p < 0.82f -> 1f
@@ -84,7 +76,7 @@ fun CelebrationOverlay(streak: Int, onFinished: () -> Unit) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(
                 brush = Brush.radialGradient(
-                    colors = listOf(LvAccent.copy(alpha = 0.55f * glow), Color.Transparent),
+                    colors = listOf(C.Red.copy(alpha = 0.55f * glow), C.Red.copy(alpha = 0f)),
                     center = center,
                     radius = size.maxDimension * 0.78f,
                 )
@@ -93,7 +85,8 @@ fun CelebrationOverlay(streak: Int, onFinished: () -> Unit) {
                 val local = ((p - piece.delay) / piece.duration).coerceIn(0f, 1f)
                 if (local <= 0f || local >= 1f) return@forEach
                 val y = -20f + local * (size.height + 60f)
-                val x = piece.x * size.width + sin((local * 3f + piece.x * 4f) * PI).toFloat() * piece.sway
+                val x = piece.x * size.width +
+                    sin((local * 3f + piece.x * 4f) * PI).toFloat() * piece.sway
                 val alpha = if (local > 0.8f) (1f - local) / 0.2f else 1f
                 rotate(degrees = local * piece.spin, pivot = Offset(x, y)) {
                     drawRect(
@@ -111,29 +104,17 @@ fun CelebrationOverlay(streak: Int, onFinished: () -> Unit) {
                 .graphicsLayer { this.alpha = textAlpha },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.minimum_done),
-                color = LvText,
-                fontFamily = Mono,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
+                style = T.Body14,
+                modifier = Modifier.padding(bottom = 4.dp),
             )
-            Spacer(Modifier.height(4.dp))
-            androidx.compose.foundation.layout.Row(
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                Text(
-                    text = streak.toString(),
-                    color = LvAccent,
-                    fontFamily = Mono,
-                    fontSize = 30.sp,
-                    lineHeight = 30.sp,
-                )
+            Row(verticalAlignment = Alignment.Bottom) {
+                AppText(text = streak.toString(), style = T.Big30Red)
                 Spacer(Modifier.width(4.dp))
-                Text(
+                AppText(
                     text = stringResource(R.string.day_streak),
-                    color = LvText,
-                    fontSize = 14.sp,
+                    style = T.Body14,
                     modifier = Modifier.padding(bottom = 3.dp),
                 )
             }

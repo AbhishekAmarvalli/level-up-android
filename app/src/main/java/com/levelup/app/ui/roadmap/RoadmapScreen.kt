@@ -4,32 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,8 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -50,49 +35,36 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.levelup.app.R
 import com.levelup.app.data.LessonEntity
 import com.levelup.app.data.PhaseEntity
 import com.levelup.app.data.PhaseWithLessons
-import com.levelup.app.domain.DateText
 import com.levelup.app.domain.NextLesson
-import com.levelup.app.ui.components.CardLabel
+import com.levelup.app.ui.components.AppDialog
+import com.levelup.app.ui.components.AppText
+import com.levelup.app.ui.components.AppTextField
 import com.levelup.app.ui.components.ConfirmDialog
 import com.levelup.app.ui.components.DialogActions
 import com.levelup.app.ui.components.DialogOption
-import com.levelup.app.ui.components.LvDialog
-import com.levelup.app.ui.components.LvIconButton
-import com.levelup.app.ui.components.LvProgressBar
-import com.levelup.app.ui.components.LvSwitch
-import com.levelup.app.ui.components.LvTextField
-import com.levelup.app.ui.components.MonoText
+import com.levelup.app.ui.components.HtmlSwitch
 import com.levelup.app.ui.components.OptionsDialog
-import com.levelup.app.ui.components.SectionLabel
-import com.levelup.app.ui.components.animatedCount
-import com.levelup.app.ui.components.lvClickable
-import com.levelup.app.ui.components.pressScale
-import com.levelup.app.ui.components.staggerIn
-import com.levelup.app.ui.theme.LvAccent
-import com.levelup.app.ui.theme.LvBg
-import com.levelup.app.ui.theme.LvBorder
-import com.levelup.app.ui.theme.LvMuted
-import com.levelup.app.ui.theme.LvSurface
-import com.levelup.app.ui.theme.LvText
-import com.levelup.app.ui.theme.Mono
+import com.levelup.app.ui.components.ProgressBar
+import com.levelup.app.ui.components.TiIcon
+import com.levelup.app.ui.components.appClickable
+import com.levelup.app.ui.theme.C
+import com.levelup.app.ui.theme.T
 import kotlin.math.roundToInt
 
 private sealed interface RoadmapDialog {
@@ -124,82 +96,88 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
         } else {
             val fixed = if (url.contains("://")) url else "https://$url"
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fixed))
-            val opened = runCatching { context.startActivity(intent) }.isSuccess
-            if (!opened) {
-                Toast.makeText(context, context.getString(R.string.link_error), Toast.LENGTH_SHORT).show()
+            if (!runCatching { context.startActivity(intent) }.isSuccess) {
+                Toast.makeText(context, context.getString(R.string.link_error), Toast.LENGTH_SHORT)
+                    .show()
             }
         }
     }
 
+    val current = state
     Box(modifier = Modifier.fillMaxSize()) {
-        val current = state
         if (current != null) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
+                contentPadding = PaddingValues(
+                    start = 14.dp,
+                    end = 14.dp,
+                    top = 4.dp,
+                    bottom = 12.dp,
+                ),
             ) {
                 item(key = "title") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 2.dp, bottom = 12.dp)
-                            .heightIn(min = 36.dp),
+                            .padding(top = 2.dp, bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        MonoText(text = stringResource(R.string.roadmap), fontSize = 16.sp)
-                        Spacer(Modifier.weight(1f))
-                        LvIconButton(
-                            iconRes = R.drawable.ic_plus,
-                            contentDescription = stringResource(R.string.add_phase),
-                            onClick = { dialog = RoadmapDialog.PhaseEditor(null) },
-                            iconSize = 18.dp,
-                            touchSize = 32.dp,
+                        AppText(
+                            text = stringResource(R.string.roadmap),
+                            style = T.Title16,
+                            modifier = Modifier.appClickable(
+                                onClick = {},
+                                onLongClick = {
+                                    dialog = RoadmapDialog.PhaseEditor(null)
+                                },
+                            ),
                         )
-                        Text(
-                            text = stringResource(R.string.expand_all),
-                            color = LvMuted,
-                            fontSize = 12.sp,
-                        )
-                        LvSwitch(checked = expandAll, onCheckedChange = {
-                            expandAll = it
-                            if (it) manualOpen.clear()
-                        })
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            AppText(
+                                text = stringResource(R.string.expand_all),
+                                style = T.Body12Muted,
+                            )
+                            HtmlSwitch(
+                                on = expandAll,
+                                onCheckedChange = {
+                                    expandAll = it
+                                    if (it) manualOpen.clear()
+                                },
+                            )
+                        }
                     }
                 }
 
                 if (current.phases.isEmpty()) {
                     item(key = "empty") {
-                        Text(
-                            text = stringResource(R.string.no_phases),
-                            color = LvMuted,
-                            fontSize = 12.sp,
-                            modifier = Modifier.padding(top = 8.dp),
-                        )
+                        AppText(text = stringResource(R.string.no_phases), style = T.Body12Muted)
                     }
                 }
 
-                itemsIndexed(items = current.phases, key = { _, phase -> phase.phase.id }) { index, phase ->
+                itemsIndexed(
+                    items = current.phases,
+                    key = { _, phase -> phase.phase.id },
+                ) { _, phase ->
                     val next = current.next
                     val isCurrent = next?.phase?.phase?.id == phase.phase.id
                     val open = if (expandAll) true else (manualOpen[phase.phase.id] ?: isCurrent)
                     PhaseBlock(
-                        modifier = Modifier.staggerIn(index),
                         phase = phase,
                         next = next,
                         open = open,
                         onToggleOpen = { togglePhase(phase, open) },
                         onMenu = { dialog = RoadmapDialog.PhaseMenu(phase) },
-                        onToggleLesson = { lesson ->
-                            vm.setLessonDone(lesson, !lesson.done)
-                        },
+                        onToggleLesson = { lesson -> vm.setLessonDone(lesson, !lesson.done) },
                         onLessonMenu = { lesson ->
                             dialog = RoadmapDialog.LessonMenu(phase, lesson)
                         },
-                        onOpenLink = { lesson -> openLink(lesson) },
+                        onOpenLink = ::openLink,
                     )
                 }
-
-                item(key = "bottom") { Spacer(Modifier.height(8.dp)) }
             }
         }
     }
@@ -224,13 +202,11 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
                 else vm.updateLesson(lesson, title, url)
                 dialog = null
             },
-            onDelete = d.lesson?.let {
-                { dialog = RoadmapDialog.DeleteLesson(it) }
-            },
+            onDelete = d.lesson?.let { { dialog = RoadmapDialog.DeleteLesson(it) } },
         )
 
         is RoadmapDialog.PhaseMenu -> {
-            val next = state?.next?.phase?.phase?.id == d.phase.phase.id
+            val isNext = state?.next?.phase?.phase?.id == d.phase.phase.id
             OptionsDialog(
                 title = d.phase.phase.name,
                 options = listOfNotNull(
@@ -248,7 +224,7 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
                         vm.movePhase(d.phase.phase, up = false)
                         dialog = null
                     },
-                    if (next) {
+                    if (isNext) {
                         DialogOption(stringResource(R.string.skip_for_now)) {
                             vm.skipNext()
                             dialog = null
@@ -321,10 +297,8 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PhaseBlock(
-    modifier: Modifier = Modifier,
     phase: PhaseWithLessons,
     next: NextLesson?,
     open: Boolean,
@@ -335,130 +309,105 @@ private fun PhaseBlock(
     onOpenLink: (LessonEntity) -> Unit,
 ) {
     val total = phase.lessons.size
-    val doneCount = phase.lessons.count { it.done }
-    val fraction = if (total == 0) 0f else doneCount.toFloat() / total.toFloat()
+    val done = phase.lessons.count { it.done }
+    val fraction = if (total == 0) 0f else done.toFloat() / total.toFloat()
     val percent = (fraction * 100f).roundToInt()
-    val complete = total > 0 && doneCount == total
+    val complete = total > 0 && done == total
     val isCurrent = next?.phase?.phase?.id == phase.phase.id
-    val orderedLessons = phase.lessons.sortedWith(compareBy({ it.sortOrder }, { it.id }))
+    val lessons = phase.lessons.sortedWith(compareBy({ it.sortOrder }, { it.id }))
 
-    Row(
-        modifier = modifier
+    Box(
+        modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min),
+            .padding(start = 9.dp)
+            .drawBehind {
+                drawLine(
+                    color = C.Border,
+                    start = Offset(0f, 0f),
+                    end = Offset(0f, size.height),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            },
     ) {
         Box(
             modifier = Modifier
-                .width(20.dp)
-                .fillMaxHeight(),
+                .offset(x = (-10).dp)
+                .size(19.dp)
+                .clip(CircleShape)
+                .background(if (complete) C.Red else C.Bg)
+                .border(
+                    1.5.dp,
+                    if (complete) C.Red else if (isCurrent) C.Text else C.Border,
+                    CircleShape,
+                ),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .offset(x = 9.dp)
-                    .width(1.dp)
-                    .fillMaxHeight()
-                    .background(LvBorder),
-            )
-            Box(
-                modifier = Modifier
-                    .size(19.dp)
-                    .clip(CircleShape)
-                    .background(if (complete) LvAccent else LvBg)
-                    .border(
-                        1.5.dp,
-                        if (complete) LvAccent else if (isCurrent) LvText else LvBorder,
-                        CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (complete) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_check),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(11.dp),
-                    )
-                }
+            if (complete) {
+                TiIcon(
+                    iconRes = R.drawable.ti_check,
+                    size = 12.dp,
+                    tint = androidx.compose.ui.graphics.Color.White,
+                )
             }
         }
 
-        val haptic = LocalHapticFeedback.current
-        val interaction = remember { MutableInteractionSource() }
-        val chevron by animateFloatAsState(
-            targetValue = if (open) 180f else 0f,
-            animationSpec = tween(200),
-            label = "chevron",
-        )
-        val shownPercent = animatedCount(percent)
         Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(start = 8.dp, bottom = 12.dp)
+                .padding(start = 20.dp, bottom = 12.dp)
                 .animateContentSize(tween(200)),
         ) {
+            val haptic = LocalHapticFeedback.current
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(
-                        interactionSource = interaction,
-                        indication = null,
-                        onClick = onToggleOpen,
-                        onLongClick = onMenu,
-                    )
-                    .pressScale(interaction)
-                    .padding(vertical = 2.dp),
+                    .appClickable(onClick = onToggleOpen, onLongClick = onMenu),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MonoText(text = phase.phase.name, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                MonoText(text = "$shownPercent%", fontSize = 13.sp, color = LvAccent)
+                AppText(
+                    text = phase.phase.name,
+                    style = T.Mono14,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                AppText(text = "$percent%", style = T.Mono13Red)
                 Spacer(Modifier.width(4.dp))
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_down),
-                    contentDescription = stringResource(R.string.cd_expand_phase),
-                    tint = LvMuted,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .rotate(chevron),
+                TiIcon(
+                    iconRes = if (open) R.drawable.ti_chevron_up else R.drawable.ti_chevron_down,
+                    size = 12.dp,
+                    tint = C.Muted,
                 )
             }
-            LvProgressBar(
+            ProgressBar(
                 fraction = fraction,
+                height = 4.dp,
                 modifier = Modifier.padding(top = 6.dp),
             )
-            Text(
-                text = stringResource(R.string.lessons_count, doneCount, total),
-                color = LvMuted,
-                fontSize = 11.sp,
+            AppText(
+                text = stringResource(R.string.lessons_count, done, total),
+                style = T.Body11Muted,
                 modifier = Modifier.padding(top = 3.dp),
             )
 
-            AnimatedVisibility(
-                visible = open,
-                enter = expandVertically(tween(200), expandFrom = Alignment.Top) + fadeIn(tween(160)),
-                exit = shrinkVertically(tween(180), shrinkTowards = Alignment.Top) + fadeOut(tween(120)),
-            ) {
-                Column {
-                    orderedLessons.forEachIndexed { index, lesson ->
-                        val isNext = next?.lesson?.id == lesson.id
-                        LessonRow(
-                            modifier = Modifier.staggerIn(index),
-                            lesson = lesson,
-                            isNext = isNext,
-                            onToggle = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onToggleLesson(lesson)
-                            },
-                            onMenu = { onLessonMenu(lesson) },
-                            onOpenLink = { onOpenLink(lesson) },
-                        )
-                    }
+            if (open) {
+                lessons.forEach { lesson ->
+                    val isNext = next?.lesson?.id == lesson.id
+                    LessonRow(
+                        lesson = lesson,
+                        isNext = isNext,
+                        onToggle = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onToggleLesson(lesson)
+                        },
+                        onMenu = { onLessonMenu(lesson) },
+                        onOpenLink = { onOpenLink(lesson) },
+                    )
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LessonRow(
     lesson: LessonEntity,
@@ -466,38 +415,30 @@ private fun LessonRow(
     onToggle: () -> Unit,
     onMenu: () -> Unit,
     onOpenLink: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(top = 4.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (isNext) LvSurface else Color.Transparent)
-            .combinedClickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = {},
-                onLongClick = onMenu,
-            )
-            .pressScale(interaction)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .background(if (isNext) C.Surface else C.Bg.copy(alpha = 0f))
+            .appClickable(onClick = {}, onLongClick = onMenu)
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onToggle),
+                .size(16.dp)
+                .appClickable(onClick = onToggle),
             contentAlignment = Alignment.Center,
         ) {
             if (lesson.done) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_check),
+                TiIcon(
+                    iconRes = R.drawable.ti_check,
+                    size = 16.dp,
+                    tint = C.Red,
                     contentDescription = stringResource(R.string.lesson_done),
-                    tint = LvAccent,
-                    modifier = Modifier.size(16.dp),
                 )
             } else {
                 Box(
@@ -506,35 +447,34 @@ private fun LessonRow(
                         .clip(CircleShape)
                         .border(
                             1.5.dp,
-                            if (isNext) LvText else LvBorder,
+                            if (isNext) C.Text else C.Border,
                             CircleShape,
                         ),
                 )
             }
         }
-        Text(
+        AppText(
             text = lesson.title,
-            color = if (lesson.done) LvMuted else LvText,
-            fontSize = 13.sp,
-            textDecoration = if (lesson.done) TextDecoration.LineThrough else TextDecoration.None,
+            style = if (lesson.done) T.Body13Muted else T.Body13,
+            textDecoration = if (lesson.done) TextDecoration.LineThrough else null,
             modifier = Modifier.weight(1f),
         )
         if (isNext) {
-            Text(
-                text = stringResource(R.string.next_tag),
-                color = LvMuted,
-                fontFamily = Mono,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(end = 2.dp),
+            AppText(text = stringResource(R.string.next_tag), style = T.Label11)
+        }
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .appClickable(onClick = onOpenLink),
+            contentAlignment = Alignment.Center,
+        ) {
+            TiIcon(
+                iconRes = R.drawable.ti_external_link,
+                size = 15.dp,
+                tint = C.Muted,
+                contentDescription = stringResource(R.string.cd_open_link),
             )
         }
-        LvIconButton(
-            iconRes = R.drawable.ic_external_link,
-            contentDescription = stringResource(R.string.cd_open_link),
-            onClick = onOpenLink,
-            iconSize = 15.dp,
-            touchSize = 24.dp,
-        )
     }
 }
 
@@ -545,11 +485,11 @@ private fun PhaseEditorDialog(
     onSave: (String) -> Unit,
 ) {
     var name by remember(initial?.id) { mutableStateOf(initial?.name.orEmpty()) }
-    LvDialog(
+    AppDialog(
         onDismiss = onDismiss,
         title = stringResource(if (initial == null) R.string.add_phase else R.string.rename),
     ) {
-        LvTextField(
+        AppTextField(
             value = name,
             onValueChange = { name = it },
             placeholder = stringResource(R.string.phase_name),
@@ -566,7 +506,6 @@ private fun PhaseEditorDialog(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LessonEditorDialog(
     initial: LessonEntity?,
@@ -576,28 +515,25 @@ private fun LessonEditorDialog(
 ) {
     var title by remember(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
     var url by remember(initial?.id) { mutableStateOf(initial?.url.orEmpty()) }
-    LvDialog(
+    AppDialog(
         onDismiss = onDismiss,
-        title = stringResource(
-            if (initial == null) R.string.add_lesson else R.string.edit_lesson
-        ),
+        title = stringResource(if (initial == null) R.string.add_lesson else R.string.edit_lesson),
     ) {
-        LvTextField(
+        AppTextField(
             value = title,
             onValueChange = { title = it },
             placeholder = stringResource(R.string.lesson_title),
         )
-        Spacer(Modifier.height(10.dp))
-        LvTextField(
+        Spacer(Modifier.height(8.dp))
+        AppTextField(
             value = url,
             onValueChange = { url = it },
             placeholder = stringResource(R.string.lesson_url),
             keyboardType = KeyboardType.Uri,
         )
-        Text(
+        AppText(
             text = stringResource(R.string.no_link),
-            color = LvMuted,
-            fontSize = 11.sp,
+            style = T.Label11,
             modifier = Modifier.padding(top = 6.dp),
         )
         DialogActions(
@@ -608,22 +544,17 @@ private fun LessonEditorDialog(
                 null
             },
             onDismiss = onDismiss,
-            extra = if (onDelete != null) {
+            extra = onDelete?.let {
                 {
-                    Box(
+                    AppText(
+                        text = stringResource(R.string.delete),
+                        style = T.Body12,
+                        color = C.Red,
                         modifier = Modifier
-                            .combinedClickable(onClick = onDelete, onLongClick = onDelete)
-                            .padding(vertical = 6.dp, horizontal = 4.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.delete),
-                            color = LvAccent,
-                            fontSize = 12.sp,
-                        )
-                    }
+                            .appClickable(onClick = it)
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                    )
                 }
-            } else {
-                null
             },
         )
     }

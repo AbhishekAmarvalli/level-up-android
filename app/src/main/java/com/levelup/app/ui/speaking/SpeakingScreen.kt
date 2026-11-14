@@ -15,25 +15,22 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,8 +38,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,12 +48,10 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -66,12 +59,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -92,42 +82,26 @@ import com.levelup.app.domain.UploadNetworkMode
 import com.levelup.app.domain.UploadState
 import com.levelup.app.domain.stateEnum
 import com.levelup.app.recording.CameraRecorder
-import com.levelup.app.ui.components.CardLabel
+import com.levelup.app.ui.components.AppText
+import com.levelup.app.ui.components.Card
+import com.levelup.app.ui.components.Chip
 import com.levelup.app.ui.components.ConfirmDialog
-import com.levelup.app.ui.components.DialogOption
-import com.levelup.app.ui.components.LvCard
-import com.levelup.app.ui.components.LvCheckbox
-import com.levelup.app.ui.components.LvChip
-import com.levelup.app.ui.components.LvIconButton
-import com.levelup.app.ui.components.LvPrimaryButton
-import com.levelup.app.ui.components.LvProgressBar
-import com.levelup.app.ui.components.LvSecondaryButton
-import com.levelup.app.ui.components.LvSwitch
-import com.levelup.app.ui.components.MonoText
-import com.levelup.app.ui.components.OptionsDialog
+import com.levelup.app.ui.components.HtmlSwitch
+import com.levelup.app.ui.components.ProgressBar
+import com.levelup.app.ui.components.RedCheckbox
 import com.levelup.app.ui.components.SectionLabel
-import com.levelup.app.ui.components.lvClickable
-import com.levelup.app.ui.components.pressScale
-import com.levelup.app.ui.components.staggerIn
-import com.levelup.app.ui.theme.LvAccent
-import com.levelup.app.ui.theme.LvBg
-import com.levelup.app.ui.theme.LvBorder
-import com.levelup.app.ui.theme.LvMuted
-import com.levelup.app.ui.theme.LvSurface
-import com.levelup.app.ui.theme.LvText
-import com.levelup.app.ui.theme.Mono
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.levelup.app.ui.components.TiIcon
+import com.levelup.app.ui.components.appClickable
+import com.levelup.app.ui.theme.C
+import com.levelup.app.ui.theme.T
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.time.LocalDate
 import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.math.sin
 
 private const val MAX_SECONDS = 300
+private const val WAVE_BARS = 30
 
 @Composable
 fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
@@ -136,20 +110,17 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
     val haptic = LocalHapticFeedback.current
     val recorder = remember { CameraRecorder(context) }
     val hasPermissions = rememberCameraPermissions()
-    var requestedOnce by rememberSaveable { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { requestedOnce = true }
+    ) { }
 
     var recording by remember { mutableStateOf(false) }
     var startedAt by remember { mutableLongStateOf(0L) }
     var elapsed by remember { mutableIntStateOf(0) }
     var amplitude by remember { mutableFloatStateOf(0f) }
-    var barPhase by remember { mutableFloatStateOf(0f) }
     var playerPath by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<ClipEntity?>(null) }
     var deleteOnDrive by remember { mutableStateOf(false) }
-    var showCapDialog by remember { mutableStateOf(false) }
 
     val googleOptions = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -179,19 +150,6 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
 
     LaunchedEffect(Unit) { vm.refreshAll() }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(80)
-            barPhase += 0.35f
-        }
-    }
-
-    val smoothAmplitude by animateFloatAsState(
-        targetValue = amplitude,
-        animationSpec = tween(120),
-        label = "amplitude",
-    )
-
     LaunchedEffect(recording, startedAt) {
         if (!recording) return@LaunchedEffect
         while (true) {
@@ -205,13 +163,29 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
         }
     }
 
+    fun requestCamera() {
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+            )
+        )
+    }
+
     fun startRecording() {
+        if (!hasPermissions) {
+            requestCamera()
+            return
+        }
         val file = vm.newClipFile()
         amplitude = 0f
         elapsed = 0
         val started = recorder.start(
             file = file,
-            onStarted = { startedAt = it; recording = true },
+            onStarted = {
+                startedAt = it
+                recording = true
+            },
             onAmplitude = { db -> amplitude = normalizeAmplitude(db) },
             onFinished = { seconds ->
                 recording = false
@@ -229,184 +203,141 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
         }
     }
 
+    val current = state
     Box(modifier = Modifier.fillMaxSize()) {
-        val current = state
         if (current != null) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 14.dp)
-                    .padding(top = 4.dp, bottom = 12.dp),
+                    .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 2.dp, bottom = 10.dp)
-                        .heightIn(min = 36.dp),
+                        .padding(top = 2.dp, bottom = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    MonoText(text = stringResource(R.string.speaking), fontSize = 16.sp)
+                    AppText(text = stringResource(R.string.speaking), style = T.Title16)
                 }
 
-                LvCard {
-                    CardLabel(stringResource(R.string.todays_prompt))
-                    Text(
+                Card {
+                    AppText(text = stringResource(R.string.todays_prompt), style = T.Label11)
+                    AppText(
                         text = current.prompt,
-                        color = LvText,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
+                        style = T.Body14,
                         modifier = Modifier.padding(top = 6.dp, bottom = 6.dp),
                     )
-                    MonoText(
-                        text = formatTime(if (recording) (MAX_SECONDS - elapsed) else MAX_SECONDS),
-                        fontSize = 26.sp,
-                        color = LvAccent,
+                    AppText(
+                        text = formatTime(if (recording) MAX_SECONDS - elapsed else MAX_SECONDS),
+                        style = T.Big26Red,
                     )
                 }
 
-                if (!hasPermissions) {
-                    LvCard(
-                        modifier = Modifier.padding(top = 10.dp),
-                    ) {
-                        MonoText(
-                            text = stringResource(R.string.camera_rationale_title),
-                            fontSize = 14.sp,
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp)
+                        .height(240.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(C.Surface),
+                ) {
+                    if (hasPermissions) {
+                        CameraPreview(
+                            recorder = recorder,
+                            modifier = Modifier.fillMaxSize(),
                         )
-                        Text(
-                            text = stringResource(R.string.camera_rationale_message),
-                            color = LvMuted,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                            modifier = Modifier.padding(top = 6.dp),
-                        )
-                        Row(
-                            modifier = Modifier.padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            LvPrimaryButton(
-                                text = stringResource(R.string.enable_camera),
-                                onClick = {
-                                    requestedOnce = true
-                                    permissionLauncher.launch(
-                                        arrayOf(
-                                            Manifest.permission.CAMERA,
-                                            Manifest.permission.RECORD_AUDIO,
-                                        )
-                                    )
-                                },
-                            )
-                            if (requestedOnce) {
-                                LvSecondaryButton(
-                                    text = stringResource(R.string.open_settings),
-                                    onClick = {
-                                        context.startActivity(
-                                            Intent(
-                                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                                Uri.parse("package:${context.packageName}"),
-                                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        )
-                                    },
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 10.dp)
-                            .height(150.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(LvSurface),
-                    ) {
-                        CameraPreview(recorder = recorder, modifier = Modifier.fillMaxSize())
-                        Text(
-                            text = stringResource(R.string.front_camera_preview),
-                            color = LvMuted,
-                            fontSize = 11.sp,
+                    } else {
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(start = 10.dp, top = 8.dp),
-                        )
-                        if (recording) {
-                            Row(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(LvAccent),
-                                )
-                                Spacer(Modifier.width(5.dp))
-                                MonoText(text = stringResource(R.string.rec), fontSize = 12.sp)
-                            }
+                                .fillMaxSize()
+                                .appClickable(onClick = ::requestCamera),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TiIcon(
+                                iconRes = R.drawable.ti_user,
+                                size = 64.dp,
+                                tint = C.Border,
+                                contentDescription = stringResource(R.string.enable_camera),
+                            )
                         }
                     }
-
-                    val pulse = rememberInfiniteTransition(label = "recordPulse")
-                    val ringScale by pulse.animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.16f,
-                        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Restart),
-                        label = "recordRingScale",
-                    )
-                    val ringAlpha by pulse.animateFloat(
-                        initialValue = 0.5f,
-                        targetValue = 0f,
-                        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Restart),
-                        label = "recordRingAlpha",
-                    )
-                    val recordInteraction = remember { MutableInteractionSource() }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (recording) {
+                    if (recording) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 8.dp, end = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(76.dp)
-                                    .graphicsLayer {
-                                        scaleX = ringScale
-                                        scaleY = ringScale
-                                        alpha = ringAlpha
-                                    }
-                                    .border(1.5.dp, LvAccent, CircleShape),
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(C.Red),
                             )
+                            Spacer(Modifier.width(5.dp))
+                            AppText(text = stringResource(R.string.rec), style = T.Mono12)
                         }
+                    }
+                }
+
+                val pulse = rememberInfiniteTransition(label = "recordPulse")
+                val ringScale by pulse.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.15f,
+                    animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Restart),
+                    label = "ringScale",
+                )
+                val ringAlpha by pulse.animateFloat(
+                    initialValue = 0.5f,
+                    targetValue = 0f,
+                    animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Restart),
+                    label = "ringAlpha",
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (recording) {
                         Box(
                             modifier = Modifier
                                 .size(76.dp)
-                                .clip(CircleShape)
-                                .background(LvSurface)
-                                .border(1.5.dp, LvBorder, CircleShape)
-                                .clickable(
-                                    interactionSource = recordInteraction,
-                                    indication = null,
-                                ) {
+                                .graphicsLayer {
+                                    scaleX = ringScale
+                                    scaleY = ringScale
+                                    alpha = ringAlpha
+                                }
+                                .border(1.5.dp, C.Red, CircleShape),
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .background(C.Surface)
+                            .border(1.5.dp, C.Border, CircleShape)
+                            .appClickable(
+                                onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     if (recording) recorder.stop() else startRecording()
-                                }
-                                .pressScale(recordInteraction),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    if (recording) R.drawable.ic_player_stop else R.drawable.ic_video
-                                ),
-                                contentDescription = stringResource(
-                                    if (recording) R.string.cd_stop else R.string.cd_record
-                                ),
-                                tint = LvAccent,
-                                modifier = Modifier.size(32.dp),
-                            )
-                        }
+                                },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TiIcon(
+                            iconRes = if (recording) {
+                                R.drawable.ti_player_stop
+                            } else {
+                                R.drawable.ti_video
+                            },
+                            size = 32.dp,
+                            tint = C.Red,
+                            contentDescription = stringResource(
+                                if (recording) R.string.cd_stop else R.string.cd_record
+                            ),
+                        )
                     }
                 }
 
@@ -414,67 +345,64 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(40.dp),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.spacedBy(
+                        3.dp,
+                        Alignment.CenterHorizontally,
+                    ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    repeat(30) { index ->
-                        val multiplier = 0.35f + 0.65f * abs(sin(barPhase + index * 0.55f))
+                    repeat(WAVE_BARS) {
                         val target = if (recording) {
-                            (6f + smoothAmplitude * 30f * multiplier).dp
+                            (6f + amplitude.coerceIn(0f, 1f) * 30f).dp
                         } else {
                             6.dp
                         }
                         val barHeight by animateDpAsState(
                             targetValue = target,
-                            animationSpec = tween(120),
-                            label = "waveBar$index",
+                            animationSpec = tween(100),
+                            label = "waveBar",
                         )
                         Box(
                             modifier = Modifier
                                 .width(3.dp)
                                 .height(barHeight)
-                                .clip(RoundedCornerShape(1.5.dp))
-                                .background(if (recording) LvText else LvMuted),
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(if (recording) C.Text else C.Muted),
                         )
-                        if (index < 29) Spacer(Modifier.width(3.dp))
                     }
                 }
 
-                Text(
+                AppText(
                     text = stringResource(
                         if (recording) R.string.recording_hint else R.string.record_hint
                     ),
-                    color = LvMuted,
-                    fontSize = 12.sp,
+                    style = T.Body12Muted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 2.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
 
                 SectionLabel(stringResource(R.string.saved_clips))
                 if (current.clips.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.no_clips),
-                        color = LvMuted,
-                        fontSize = 12.sp,
-                    )
+                    AppText(text = stringResource(R.string.no_clips), style = T.Body12Muted)
                 } else {
-                    current.clips.forEachIndexed { index, clip ->
+                    current.clips.forEach { clip ->
                         ClipRow(
                             clip = clip,
                             backupEnabled = current.settings.backupEnabled,
-                            modifier = Modifier.staggerIn(index),
                             onPlay = {
                                 if (File(clip.filePath).exists()) {
                                     playerPath = clip.filePath
                                 } else {
-                                    Toast.makeText(context, R.string.clip_missing, Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, R.string.clip_missing, Toast.LENGTH_SHORT)
+                                        .show()
                                 }
                             },
                             onDelete = {
                                 deleteTarget = clip
-                                deleteOnDrive = clip.stateEnum() == UploadState.UPLOADED
+                                deleteOnDrive =
+                                    current.settings.backupEnabled && clip.driveFileId != null
                             },
                         )
                     }
@@ -488,7 +416,6 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                         else vm.disableBackup()
                     },
                     onModeSelected = vm::setUploadMode,
-                    onCapClick = { showCapDialog = true },
                     onRefresh = vm::refreshStorage,
                 )
 
@@ -497,8 +424,6 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                     selected = current.settings.checklistItems,
                     onToggle = vm::toggleChecklist,
                 )
-
-                Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -522,35 +447,22 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        LvCheckbox(
-                            checked = deleteOnDrive,
-                            onToggle = { deleteOnDrive = !deleteOnDrive },
+                        RedCheckbox(
+                            done = deleteOnDrive,
                             size = 18.dp,
+                            onToggle = { deleteOnDrive = !deleteOnDrive },
                         )
-                        Text(
+                        AppText(
                             text = stringResource(R.string.delete_also_drive),
-                            color = LvMuted,
-                            fontSize = 12.sp,
+                            style = T.Body12Muted,
                         )
                     }
                 }
             } else {
                 null
             },
-        )
-    }
-
-    if (showCapDialog) {
-        val options = listOf(200, 500, 1024, 2048)
-        OptionsDialog(
-            title = stringResource(R.string.monthly_cap),
-            options = options.map { mb ->
-                DialogOption(stringResource(R.string.cap_value, mb)) {
-                    vm.setMonthlyCap(mb)
-                }
-            } + DialogOption(stringResource(R.string.no_cap)) { vm.setMonthlyCap(null) },
-            onDismiss = { showCapDialog = false },
         )
     }
 }
@@ -578,15 +490,18 @@ private fun rememberCameraPermissions(): Boolean {
     val lifecycleOwner = LocalLifecycleOwner.current
     val permissions = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
     var granted by remember {
-        mutableStateOf(permissions.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-        })
+        mutableStateOf(
+            permissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        )
     }
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 granted = permissions.all {
-                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                    ContextCompat.checkSelfPermission(context, it) ==
+                        PackageManager.PERMISSION_GRANTED
                 }
             }
         }
@@ -602,107 +517,73 @@ private fun ClipRow(
     backupEnabled: Boolean,
     onPlay: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val thumbnail by produceState<Bitmap?>(initialValue = null, clip.filePath) {
         value = withContext(Dispatchers.IO) { extractThumbnail(clip.filePath) }
     }
-    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(LvSurface)
-            .clickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = onPlay,
-            )
-            .pressScale(interaction)
-            .padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 8.dp),
+            .background(C.Surface)
+            .appClickable(onClick = onPlay)
+            .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(LvBg),
+                .background(C.Bg),
             contentAlignment = Alignment.Center,
         ) {
             thumbnail?.let { bitmap ->
-                androidx.compose.foundation.Image(
+                Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
-            Icon(
-                painter = painterResource(R.drawable.ic_player_play),
+            TiIcon(
+                iconRes = R.drawable.ti_player_play,
+                size = 18.dp,
+                tint = C.Muted,
                 contentDescription = stringResource(R.string.cd_play),
-                tint = LvMuted,
-                modifier = Modifier.size(18.dp),
             )
         }
-        Text(
+        AppText(
             text = stringResource(R.string.clip_name, clip.id),
-            color = LvText,
-            fontSize = 13.sp,
+            style = T.Body13,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 10.dp, end = 6.dp),
+            modifier = Modifier.weight(1f),
         )
-        MonoText(
-            text = formatTime(clip.durationSeconds),
-            fontSize = 12.sp,
-            color = LvMuted,
-        )
+        AppText(text = formatTime(clip.durationSeconds), style = T.Mono12Muted)
         if (backupEnabled) {
-            CloudStatus(clip = clip)
+            TiIcon(
+                iconRes = if (clip.stateEnum() == UploadState.UPLOADED) {
+                    R.drawable.ti_cloud_check
+                } else {
+                    R.drawable.ti_cloud_off
+                },
+                size = 16.dp,
+                tint = C.Muted,
+            )
         }
-        LvIconButton(
-            iconRes = R.drawable.ic_trash,
-            contentDescription = stringResource(R.string.cd_delete),
-            onClick = onDelete,
-            iconSize = 17.dp,
-            touchSize = 28.dp,
-        )
-    }
-}
-
-@Composable
-private fun CloudStatus(clip: ClipEntity) {
-    val state = clip.stateEnum()
-    val label = when (state) {
-        UploadState.QUEUED -> stringResource(R.string.queued)
-        UploadState.UPLOADING -> stringResource(R.string.uploading)
-        UploadState.WAITING_FOR_WIFI -> stringResource(R.string.waiting_wifi_label)
-        UploadState.PAUSED_STORAGE -> stringResource(R.string.paused_storage)
-        UploadState.FAILED -> stringResource(R.string.upload_failed)
-        else -> null
-    }
-    Column(
-        modifier = Modifier.padding(horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            painter = painterResource(
-                if (state == UploadState.UPLOADED) R.drawable.ic_cloud_check
-                else R.drawable.ic_cloud_off
-            ),
-            contentDescription = null,
-            tint = LvMuted,
-            modifier = Modifier.size(16.dp),
-        )
-        if (label != null) {
-            Text(
-                text = label,
-                color = LvMuted,
-                fontSize = 11.sp,
-                maxLines = 1,
+        Box(
+            modifier = Modifier
+                .size(18.dp)
+                .appClickable(onClick = onDelete),
+            contentAlignment = Alignment.Center,
+        ) {
+            TiIcon(
+                iconRes = R.drawable.ti_trash,
+                size = 17.dp,
+                tint = C.Muted,
+                contentDescription = stringResource(R.string.cd_delete),
             )
         }
     }
@@ -720,11 +601,10 @@ private fun WeeklyChecklist(selected: Set<String>, onToggle: (String) -> Unit) {
         R.string.check_pace,
     ).map { stringResource(it) }
 
-    LvCard {
-        Text(
+    Card {
+        AppText(
             text = stringResource(R.string.weekly_review_hint),
-            color = LvMuted,
-            fontSize = 12.sp,
+            style = T.Body12Muted,
             modifier = Modifier.padding(bottom = 8.dp),
         )
         FlowRow(
@@ -732,7 +612,7 @@ private fun WeeklyChecklist(selected: Set<String>, onToggle: (String) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             items.forEach { item ->
-                LvChip(
+                Chip(
                     text = item,
                     active = selected.contains(item),
                     onClick = { onToggle(item) },
@@ -747,150 +627,94 @@ private fun StorageCard(
     state: SpeakingUiState,
     onToggleBackup: (Boolean) -> Unit,
     onModeSelected: (UploadNetworkMode) -> Unit,
-    onCapClick: () -> Unit,
     onRefresh: () -> Unit,
 ) {
     val settings = state.settings
-    val capBytes = settings.monthlyMobileCapMb?.toLong()?.times(1024L * 1024L)
-    val capReached = capBytes != null && state.mobileBytes >= capBytes
     val quota = state.quota
     val percent = quota?.percent ?: 0
 
-    LvCard {            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 32.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.backup_to_drive),
-                color = LvText,
-                fontSize = 13.sp,
-                modifier = Modifier.weight(1f),
-            )
-            LvSwitch(
-                checked = settings.backupEnabled,
+    Card {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            AppText(text = stringResource(R.string.backup_to_drive), style = T.Body13)
+            HtmlSwitch(
+                on = settings.backupEnabled,
                 onCheckedChange = onToggleBackup,
             )
         }
 
         if (!settings.backupEnabled) {
-            Text(
+            AppText(
                 text = stringResource(R.string.clips_local_only),
-                color = LvMuted,
-                fontSize = 12.sp,
+                style = T.Body12Muted,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            return@LvCard
+            return@Card
         }
 
-        Text(
+        AppText(
             text = stringResource(R.string.upload_over),
-            color = LvMuted,
-            fontSize = 12.sp,
+            style = T.Body13,
             modifier = Modifier.padding(top = 8.dp),
         )
         Row(
             modifier = Modifier.padding(top = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            LvChip(
+            Chip(
                 text = stringResource(R.string.upload_wifi_only),
                 active = settings.uploadNetworkMode == UploadNetworkMode.WIFI_ONLY,
                 onClick = { onModeSelected(UploadNetworkMode.WIFI_ONLY) },
-                fontSize = 11.sp,
             )
-            LvChip(
+            Chip(
                 text = stringResource(R.string.upload_wifi_mobile),
                 active = settings.uploadNetworkMode == UploadNetworkMode.WIFI_AND_MOBILE,
                 onClick = { onModeSelected(UploadNetworkMode.WIFI_AND_MOBILE) },
-                fontSize = 11.sp,
             )
-        }
-        Row(modifier = Modifier.padding(top = 4.dp)) {
-            LvChip(
+            Chip(
                 text = stringResource(R.string.upload_ask_mobile),
                 active = settings.uploadNetworkMode == UploadNetworkMode.ASK_BEFORE_MOBILE,
                 onClick = { onModeSelected(UploadNetworkMode.ASK_BEFORE_MOBILE) },
-                fontSize = 11.sp,
             )
-        }
-
-        if (settings.uploadNetworkMode != UploadNetworkMode.WIFI_ONLY) {
-            Text(
-                text = stringResource(
-                    R.string.mobile_used,
-                    String.format(Locale.US, "%.1f", state.mobileBytes / (1024.0 * 1024.0)),
-                ),
-                color = LvMuted,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 36.dp)
-                    .lvClickable(onClick = onCapClick)
-                    .padding(top = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.monthly_cap),
-                    color = LvMuted,
-                    fontSize = 12.sp,
-                    modifier = Modifier.weight(1f),
-                )
-                MonoText(
-                    text = settings.monthlyMobileCapMb?.let {
-                        stringResource(R.string.cap_value, it)
-                    } ?: stringResource(R.string.no_cap),
-                    fontSize = 12.sp,
-                )
-            }
-            if (capReached) {
-                Text(
-                    text = stringResource(R.string.cap_reached),
-                    color = LvAccent,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
         }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 10.dp),
+                .padding(top = 10.dp)
+                .appClickable(onClick = onRefresh),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.google_storage_used),
-                color = LvMuted,
-                fontSize = 12.sp,
-                modifier = Modifier.weight(1f),
+                style = T.Body12Muted,
             )
-            MonoText(
+            AppText(
                 text = when {
                     quota == null -> "—"
                     quota.limitBytes == null -> stringResource(
                         R.string.storage_used_only,
                         formatGigabytes(quota.usageBytes),
                     )
-
                     else -> stringResource(
                         R.string.storage_of_limit,
                         formatGigabytes(quota.usageBytes),
                         formatGigabytes(quota.limitBytes),
                     )
                 },
-                fontSize = 12.sp,
+                style = T.Mono12,
             )
         }
-        LvProgressBar(
+        ProgressBar(
             fraction = quota?.fraction ?: 0f,
-            modifier = Modifier.padding(top = 5.dp),
             height = 5.dp,
+            modifier = Modifier.padding(top = 5.dp),
         )
-        Text(
+        AppText(
             text = stringResource(
                 when {
                     percent >= 90 -> R.string.storage_status_paused
@@ -898,38 +722,9 @@ private fun StorageCard(
                     else -> R.string.storage_status_ok
                 }
             ),
-            color = LvMuted,
-            fontSize = 12.sp,
+            style = T.Body12Muted,
             modifier = Modifier.padding(top = 8.dp),
         )
-        if (state.quotaLoading) {
-            Text(
-                text = stringResource(R.string.storage_loading),
-                color = LvMuted,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 6.dp),
-            )
-        }
-        if (state.quotaError) {
-            Row(
-                modifier = Modifier.padding(top = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.storage_unknown),
-                    color = LvMuted,
-                    fontSize = 11.sp,
-                )
-                Text(
-                    text = stringResource(R.string.refresh),
-                    color = LvText,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .lvClickable(onClick = onRefresh)
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                )
-            }
-        }
     }
 }
 
@@ -945,7 +740,7 @@ private fun VideoPlayerDialog(path: String, onDismiss: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .background(C.Bg),
         ) {
             AndroidView(
                 factory = { context ->
@@ -960,15 +755,14 @@ private fun VideoPlayerDialog(path: String, onDismiss: () -> Unit) {
                 },
                 modifier = Modifier.fillMaxSize(),
             )
-            LvIconButton(
-                iconRes = R.drawable.ic_close,
-                contentDescription = stringResource(R.string.close),
-                onClick = onDismiss,
+            AppText(
+                text = stringResource(R.string.close),
+                style = T.Body13,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(16.dp),
-                iconSize = 20.dp,
-                tint = LvText,
+                    .padding(16.dp)
+                    .appClickable(onClick = onDismiss)
+                    .padding(4.dp),
             )
         }
     }

@@ -27,6 +27,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ColumnScope
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -48,20 +49,20 @@ import com.levelup.app.data.WidgetSnapshot
 import com.levelup.app.domain.ActivityRange
 import com.levelup.app.domain.TierProgress
 import com.levelup.app.domain.displayTitle
+import com.levelup.app.ui.theme.C
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-private val BG = ColorProvider(R.color.lv_bg)
-private val SURFACE = ColorProvider(R.color.lv_surface)
-private val BORDER = ColorProvider(R.color.lv_border)
-private val TEXT = ColorProvider(R.color.lv_text)
-private val MUTED = ColorProvider(R.color.lv_muted)
-private val ACCENT = ColorProvider(R.color.lv_accent)
+private val BG = ColorProvider(C.Bg)
+private val SURFACE = ColorProvider(C.Surface)
+private val BORDER = ColorProvider(C.Border)
+private val TEXT = ColorProvider(C.Text)
+private val MUTED = ColorProvider(C.Muted)
+private val ACCENT = ColorProvider(C.Red)
 
 private val TaskIdKey = ActionParameters.Key<Long>("task_id")
 
-/** Refreshes every widget. Called after any data mutation, at midnight and from widget taps. */
 object Widgets {
     suspend fun refreshAll(context: Context) {
         withContext(Dispatchers.Main.immediate) {
@@ -75,8 +76,6 @@ object Widgets {
 
 private suspend fun snapshot(context: Context): WidgetSnapshot =
     (context.applicationContext as LevelUpApp).container.repo.widgetSnapshot()
-
-// ---------------------------------------------------------------------------------- frame
 
 @Composable
 private fun WidgetFrame(tab: String, content: @Composable ColumnScope.() -> Unit) {
@@ -111,7 +110,6 @@ private fun WidgetText(
     fontSize: Int,
     color: ColorProvider = TEXT,
     mono: Boolean = true,
-    weight: FontWeight = FontWeight.Normal,
     maxLines: Int = 1,
     strikethrough: Boolean = false,
     modifier: GlanceModifier = GlanceModifier,
@@ -124,7 +122,7 @@ private fun WidgetText(
             color = color,
             fontSize = fontSize.sp,
             fontFamily = if (mono) FontFamily.Monospace else FontFamily.SansSerif,
-            fontWeight = weight,
+            fontWeight = FontWeight.Normal,
             textDecoration = if (strikethrough) TextDecoration.LineThrough else null,
         ),
     )
@@ -155,32 +153,49 @@ private fun GlanceChip(label: String, active: Boolean, action: Action) {
     Box(
         modifier = GlanceModifier
             .background(if (active) TEXT else BORDER)
-            .cornerRadius(10.dp)
+            .cornerRadius(12.dp)
             .padding(0.5.dp)
             .clickable(action),
     ) {
         Box(
             GlanceModifier
                 .background(BG)
-                .cornerRadius(10.dp)
-                .padding(horizontal = 7.dp, vertical = 2.dp),
+                .cornerRadius(12.dp)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
-            WidgetText(label, 11, if (active) TEXT else MUTED, mono = false)
+            WidgetText(
+                text = label,
+                fontSize = 12,
+                color = if (active) TEXT else MUTED,
+                mono = false,
+            )
         }
     }
 }
 
-// ---------------------------------------------------------------------------------- coming up
+@Composable
+private fun GlanceProgress(fraction: Float) {
+    Image(
+        provider = ImageProvider(WidgetProgressBitmap.render(fraction)),
+        contentDescription = null,
+        contentScale = ContentScale.FillBounds,
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(5.dp),
+    )
+}
 
 class ComingUpWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = snapshot(context)
-        val label = context.getString(R.string.widget_coming_up_label)
-        val days = context.getString(R.string.days)
         val noDeadline = context.getString(R.string.widget_no_deadline)
         provideContent {
             WidgetFrame("deadlines") {
-                WidgetText(label, 11, MUTED)
+                WidgetText(
+                    text = context.getString(R.string.widget_coming_up_label),
+                    fontSize = 11,
+                    color = MUTED,
+                )
                 if (data.upcoming.isEmpty()) {
                     VSpace(4)
                     WidgetText(noDeadline, 14, TEXT, mono = false)
@@ -192,20 +207,25 @@ class ComingUpWidget : GlanceAppWidget() {
                     ) {
                         WidgetText(first.daysLeft.toString(), 56, ACCENT)
                         WidgetText(
-                            text = days,
+                            text = context.getString(R.string.days),
                             fontSize = 13,
                             color = MUTED,
                             modifier = GlanceModifier.padding(start = 8.dp, bottom = 7.dp),
                         )
                     }
                     WidgetText(first.title, 15, TEXT, mono = false)
-                    WidgetText(first.dateText, 12, MUTED)
+                    WidgetText(
+                        text = first.dateText,
+                        fontSize = 12,
+                        color = MUTED,
+                        modifier = GlanceModifier.padding(top = 2.dp, bottom = 8.dp),
+                    )
                     data.upcoming.drop(1).take(2).forEach { item ->
-                        Box(GlanceModifier.padding(top = 4.dp)) {
-                            ThinDivider()
-                        }
+                        ThinDivider()
                         Row(
-                            modifier = GlanceModifier.fillMaxWidth().padding(top = 5.dp),
+                            modifier = GlanceModifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             WidgetText(
@@ -213,6 +233,7 @@ class ComingUpWidget : GlanceAppWidget() {
                                 fontSize = 12,
                                 color = TEXT,
                                 mono = false,
+                                maxLines = 1,
                                 modifier = GlanceModifier.defaultWeight(),
                             )
                             HSpace(6)
@@ -225,19 +246,19 @@ class ComingUpWidget : GlanceAppWidget() {
     }
 }
 
-// ---------------------------------------------------------------------------------- today
-
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = snapshot(context)
-        val label = context.getString(R.string.tab_today).uppercase()
-        val noTasks = context.getString(R.string.widget_no_tasks)
         provideContent {
             WidgetFrame("today") {
-                WidgetText(label, 11, MUTED)
+                WidgetText(
+                    text = context.getString(R.string.tab_today).uppercase(),
+                    fontSize = 11,
+                    color = MUTED,
+                )
                 VSpace(4)
                 if (data.visibleTasks.isEmpty()) {
-                    WidgetText(noTasks, 12, MUTED, mono = false)
+                    WidgetText(context.getString(R.string.widget_no_tasks), 12, MUTED, mono = false)
                 } else {
                     data.visibleTasks.take(7).forEach { task ->
                         Row(
@@ -270,6 +291,7 @@ class TodayWidget : GlanceAppWidget() {
                                 color = if (task.done) MUTED else TEXT,
                                 mono = false,
                                 strikethrough = task.done,
+                                maxLines = 1,
                                 modifier = GlanceModifier.defaultWeight(),
                             )
                         }
@@ -280,15 +302,9 @@ class TodayWidget : GlanceAppWidget() {
     }
 }
 
-// ---------------------------------------------------------------------------------- activity
-
 class ActivityWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = snapshot(context)
-        val label = context.getString(R.string.widget_activity_label)
-        val weekLabel = context.getString(R.string.widget_7days)
-        val monthLabel = context.getString(R.string.widget_4weeks)
-        val averageSuffix = context.getString(R.string.of_tasks_done_average)
         val sevenDays = data.range == ActivityRange.WEEK
         val chart = withContext(Dispatchers.Default) {
             ActivityChartBitmap.render(
@@ -303,100 +319,111 @@ class ActivityWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    WidgetText(label, 11, MUTED, modifier = GlanceModifier.defaultWeight())
+                    WidgetText(
+                        text = context.getString(R.string.widget_activity_label),
+                        fontSize = 11,
+                        color = MUTED,
+                        modifier = GlanceModifier.defaultWeight(),
+                    )
                     GlanceChip(
-                        label = weekLabel,
+                        label = context.getString(R.string.widget_7days),
                         active = sevenDays,
                         action = actionRunCallback<ToggleRangeAction>(),
                     )
                     HSpace(4)
                     GlanceChip(
-                        label = monthLabel,
+                        label = context.getString(R.string.widget_4weeks),
                         active = !sevenDays,
                         action = actionRunCallback<ToggleRangeAction>(),
                     )
                 }
                 Row(
-                    modifier = GlanceModifier.padding(top = 6.dp),
+                    modifier = GlanceModifier.padding(top = 6.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.Bottom,
                 ) {
                     WidgetText("${data.activity.average}%", 28, ACCENT)
                     WidgetText(
-                        text = averageSuffix,
+                        text = context.getString(R.string.of_tasks_done_average),
                         fontSize = 12,
                         color = MUTED,
                         mono = false,
-                        modifier = GlanceModifier.padding(start = 6.dp, bottom = 3.dp),
+                        modifier = GlanceModifier.padding(start = 6.dp),
                     )
                 }
                 Image(
                     provider = ImageProvider(chart),
-                    contentDescription = label,
+                    contentDescription = context.getString(R.string.widget_activity_label),
+                    contentScale = ContentScale.FillBounds,
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .height(110.dp)
-                        .padding(top = 4.dp),
+                        .height(126.dp),
                 )
-                ThinDivider()
             }
         }
     }
 }
 
-// ---------------------------------------------------------------------------------- streak + next
-
 class StreakNextWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val data = snapshot(context)
-        val streakLabel = context.getString(R.string.streak)
-        val nextLabel = context.getString(R.string.widget_next_step)
-        val allDone = context.getString(R.string.widget_all_done)
         provideContent {
-            WidgetFrame("today") {
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
+            Row(
+                modifier = GlanceModifier.fillMaxSize(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = GlanceModifier
+                        .defaultWeight()
+                        .background(BORDER)
+                        .cornerRadius(20.dp)
+                        .padding(0.5.dp),
                 ) {
                     Column(
                         modifier = GlanceModifier
-                            .defaultWeight()
-                            .background(SURFACE)
-                            .cornerRadius(12.dp)
+                            .fillMaxWidth()
+                            .background(BG)
+                            .cornerRadius(20.dp)
                             .padding(12.dp),
                     ) {
-                        WidgetText(streakLabel, 11, MUTED)
+                        WidgetText(context.getString(R.string.streak), 11, MUTED)
                         WidgetText(data.streak.toString(), 30, ACCENT)
                         Row(
                             modifier = GlanceModifier.padding(top = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            data.dots.forEach { active ->
+                            data.dots.forEachIndexed { index, active ->
                                 Box(
                                     GlanceModifier
                                         .size(9.dp)
                                         .cornerRadius(5.dp)
                                         .background(if (active) ACCENT else BORDER)
                                 ) {}
-                                HSpace(4)
+                                if (index < data.dots.lastIndex) HSpace(3)
                             }
                         }
-                        data.tierProgress.forEach { tier ->
-                            TierBar(tier)
-                        }
+                        data.tierProgress.forEach { tier -> TierBar(tier) }
                     }
-                    HSpace(10)
+                }
+                HSpace(10)
+                Column(
+                    modifier = GlanceModifier
+                        .defaultWeight()
+                        .background(BORDER)
+                        .cornerRadius(20.dp)
+                        .padding(0.5.dp),
+                ) {
                     Column(
                         modifier = GlanceModifier
-                            .defaultWeight()
-                            .background(SURFACE)
-                            .cornerRadius(12.dp)
+                            .fillMaxWidth()
+                            .background(BG)
+                            .cornerRadius(20.dp)
                             .padding(12.dp),
                     ) {
-                        WidgetText(nextLabel, 11, MUTED)
+                        WidgetText(context.getString(R.string.widget_next_step), 11, MUTED)
                         val next = data.nextLesson
                         if (next == null) {
                             WidgetText(
-                                text = allDone,
+                                text = context.getString(R.string.widget_all_done),
                                 fontSize = 12,
                                 color = TEXT,
                                 mono = false,
@@ -408,14 +435,14 @@ class StreakNextWidget : GlanceAppWidget() {
                                 fontSize = 13,
                                 color = TEXT,
                                 maxLines = 2,
-                                modifier = GlanceModifier.padding(top = 6.dp),
+                                modifier = GlanceModifier.padding(top = 6.dp, bottom = 4.dp),
                             )
                             WidgetText(
                                 text = next.phase.phase.name,
                                 fontSize = 11,
                                 color = MUTED,
                                 mono = false,
-                                modifier = GlanceModifier.padding(top = 4.dp),
+                                maxLines = 2,
                             )
                         }
                     }
@@ -434,29 +461,24 @@ private fun TierBar(tier: TierProgress) {
         else -> context.getString(R.string.widget_bonus)
     }
     Row(
-        modifier = GlanceModifier.fillMaxWidth().padding(top = 5.dp),
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(top = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        WidgetText(label, 11, MUTED, mono = false, modifier = GlanceModifier.width(34.dp))
-        Box(
-            GlanceModifier
-                .width(58.dp)
-                .height(5.dp)
-                .cornerRadius(3.dp)
-                .background(BORDER),
-        ) {
-            Box(
-                GlanceModifier
-                    .width((58f * tier.ratio.coerceIn(0f, 1f)).dp)
-                    .height(5.dp)
-                    .cornerRadius(3.dp)
-                    .background(TEXT),
-            ) {}
+        WidgetText(
+            text = label,
+            fontSize = 11,
+            color = MUTED,
+            mono = false,
+            modifier = GlanceModifier.width(34.dp),
+        )
+        HSpace(6)
+        Box(GlanceModifier.defaultWeight()) {
+            GlanceProgress(tier.ratio)
         }
     }
 }
-
-// ---------------------------------------------------------------------------------- actions
 
 class ToggleTaskAction : ActionCallback {
     override suspend fun onAction(
@@ -480,8 +502,6 @@ class ToggleRangeAction : ActionCallback {
         repo.toggleWidgetActivityRange()
     }
 }
-
-// ---------------------------------------------------------------------------------- receivers
 
 class ComingUpWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ComingUpWidget()

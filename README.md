@@ -18,7 +18,7 @@ Google Drive backup.
 
 - **Location in this project:** `LevelUp-1.0-debug.apk` (repository root)
 - **Requirements:** Android 8.0 or newer (`minSdk 26`), about 16 MB
-- **SHA-256:** `9bd70665378e1c3e85979a6080460d860726754637a73ebb40a54a5b6e9749b7`
+- **SHA-256:** `e1f6f0b25f605ad310a21328f5eb237d9f6be1de5f54ecf0522cc8bd2ad4f162`
 - This is a debug build signed with the debug keystore. When opening the file, allow your
   browser or file manager to install unknown apps if Android asks.
 
@@ -287,7 +287,7 @@ HTML at 1 CSS px = 1 dp.
 | **Deadlines** countdown | **Matches**; red mono 24 number and "days left". |
 | **Deadlines** DONE section | **Matches**; driven by real completed deadlines, checked box, title and completion date ("6 Nov" style). A checkbox was added to active rows as required. |
 | **Speaking** prompt card | **Matches**; label, prompt, red mono 26 countdown (`05:00`). Prompts rotate daily and are editable. |
-| **Speaking** camera area | **Real CameraX front preview** replacing the fake box; 150 dp tall, rounded 14, “Front camera preview” label and REC dot/label only while recording. |
+| **Speaking** camera area | **Real CameraX front preview** replacing the fake box; 240 dp tall, rounded 14, with the REC dot/label only while recording. |
 | **Speaking** record button | **Matches**; 76 dp circle, surface fill, 1.5 border, red video/stop icon. |
 | **Speaking** waveform | **Real microphone amplitude** from CameraX, 30 bars 3×3, 6 dp idle muted, moving off-white bars while recording. |
 | **Speaking** helper text | **Matches**; idle/recording copy exactly as the HTML. |

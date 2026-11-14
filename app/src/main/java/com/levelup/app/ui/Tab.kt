@@ -8,8 +8,8 @@ enum class Tab(
     @StringRes val labelRes: Int,
     @DrawableRes val iconRes: Int,
 ) {
-    TODAY(R.string.tab_today, R.drawable.ic_tab_home),
-    ROADMAP(R.string.tab_roadmap, R.drawable.ic_tab_route),
-    DEADLINES(R.string.tab_deadlines, R.drawable.ic_tab_calendar),
-    SPEAKING(R.string.tab_speaking, R.drawable.ic_tab_video),
+    TODAY(R.string.tab_today, R.drawable.ti_home),
+    ROADMAP(R.string.tab_roadmap, R.drawable.ti_route),
+    DEADLINES(R.string.tab_deadlines, R.drawable.ti_calendar),
+    SPEAKING(R.string.tab_speaking, R.drawable.ti_video),
 }

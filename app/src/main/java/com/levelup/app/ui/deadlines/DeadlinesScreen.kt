@@ -1,24 +1,17 @@
 package com.levelup.app.ui.deadlines
 
 import android.app.DatePickerDialog
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,7 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,14 +29,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.levelup.app.R
@@ -53,33 +43,22 @@ import com.levelup.app.domain.DateText
 import com.levelup.app.domain.DeadlineType
 import com.levelup.app.domain.daysLeft
 import com.levelup.app.domain.typeEnum
-import com.levelup.app.ui.components.CardLabel
+import com.levelup.app.ui.components.AppDialog
+import com.levelup.app.ui.components.AppText
+import com.levelup.app.ui.components.AppTextField
+import com.levelup.app.ui.components.Card
+import com.levelup.app.ui.components.Chip
 import com.levelup.app.ui.components.ConfirmDialog
 import com.levelup.app.ui.components.DialogActions
 import com.levelup.app.ui.components.DialogOption
-import com.levelup.app.ui.components.LvCard
-import com.levelup.app.ui.components.LvCheckbox
-import com.levelup.app.ui.components.LvChip
-import com.levelup.app.ui.components.LvDialog
-import com.levelup.app.ui.components.LvIconButton
-import com.levelup.app.ui.components.LvTextField
-import com.levelup.app.ui.components.MonoText
 import com.levelup.app.ui.components.OptionsDialog
+import com.levelup.app.ui.components.RedCheckbox
 import com.levelup.app.ui.components.SectionLabel
-import com.levelup.app.ui.components.animatedCount
-import com.levelup.app.ui.components.lvClickable
-import com.levelup.app.ui.components.pressScale
-import com.levelup.app.ui.components.staggerIn
-import com.levelup.app.ui.theme.LvAccent
-import com.levelup.app.ui.theme.LvBorder
-import com.levelup.app.ui.theme.LvMuted
-import com.levelup.app.ui.theme.LvSurface
-import com.levelup.app.ui.theme.LvText
-import com.levelup.app.ui.theme.Mono
+import com.levelup.app.ui.components.appClickable
+import com.levelup.app.ui.theme.C
+import com.levelup.app.ui.theme.T
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import kotlin.math.max
 
 private sealed interface DeadlineDialog {
     data class Editor(val deadline: DeadlineEntity?) : DeadlineDialog
@@ -91,58 +70,57 @@ private sealed interface DeadlineDialog {
 fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     var mode by rememberSaveable { mutableStateOf("list") }
-    var monthKey by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     var dialog by remember { mutableStateOf<DeadlineDialog?>(null) }
-    val month = runCatching { YearMonth.parse(monthKey) }.getOrDefault(YearMonth.now())
 
+    val current = state
     Box(modifier = Modifier.fillMaxSize()) {
-        val current = state
         if (current != null) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
+                contentPadding = PaddingValues(
+                    start = 14.dp,
+                    end = 14.dp,
+                    top = 4.dp,
+                    bottom = 12.dp,
+                ),
             ) {
                 item(key = "title") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 2.dp, bottom = 10.dp)
-                            .heightIn(min = 36.dp),
+                            .padding(top = 2.dp, bottom = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        MonoText(text = stringResource(R.string.deadlines), fontSize = 16.sp)
-                        Spacer(Modifier.weight(1f))
-                        LvIconButton(
-                            iconRes = R.drawable.ic_plus,
-                            contentDescription = stringResource(R.string.add_deadline),
-                            onClick = { dialog = DeadlineDialog.Editor(null) },
-                            iconSize = 18.dp,
-                            touchSize = 32.dp,
+                        AppText(
+                            text = stringResource(R.string.deadlines),
+                            style = T.Title16,
+                            modifier = Modifier.appClickable(
+                                onClick = {},
+                                onLongClick = { dialog = DeadlineDialog.Editor(null) },
+                            ),
                         )
                     }
                 }
 
                 item(key = "calendar") {
                     CalendarCard(
-                        month = month,
+                        month = YearMonth.from(current.today),
                         today = current.today,
                         deadlines = current.all,
-                        onPrev = { monthKey = month.minusMonths(1).toString() },
-                        onNext = { monthKey = month.plusMonths(1).toString() },
                     )
                 }
 
-                item(key = "toggle") {
+                item(key = "modes") {
                     Row(
                         modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        LvChip(
+                        Chip(
                             text = stringResource(R.string.list),
                             active = mode == "list",
                             onClick = { mode = "list" },
                         )
-                        LvChip(
+                        Chip(
                             text = stringResource(R.string.timeline),
                             active = mode == "timeline",
                             onClick = { mode = "timeline" },
@@ -150,31 +128,26 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
                     }
                 }
 
-                if (current.upcoming.isEmpty()) {
-                    item(key = "empty") {
-                        Text(
-                            text = stringResource(R.string.no_deadlines),
-                            color = LvMuted,
-                            fontSize = 12.sp,
-                        )
-                    }
-                } else if (mode == "list") {
-                    itemsIndexed(items = current.upcoming, key = { _, deadline -> deadline.id }) { index, deadline ->
+                if (mode == "list") {
+                    itemsIndexed(
+                        items = current.upcoming,
+                        key = { _, deadline -> deadline.id },
+                    ) { _, deadline ->
                         DeadlineListRow(
                             deadline = deadline,
                             today = current.today,
-                            modifier = Modifier.staggerIn(index),
                             onClick = { dialog = DeadlineDialog.Editor(deadline) },
                             onLongClick = { dialog = DeadlineDialog.Menu(deadline) },
-                            onToggleDone = { vm.setDone(deadline, true) },
                         )
                     }
                 } else {
-                    itemsIndexed(items = current.upcoming, key = { _, deadline -> deadline.id }) { index, deadline ->
+                    itemsIndexed(
+                        items = current.upcoming,
+                        key = { _, deadline -> deadline.id },
+                    ) { _, deadline ->
                         DeadlineTimelineRow(
                             deadline = deadline,
                             today = current.today,
-                            modifier = Modifier.staggerIn(index),
                             onClick = { dialog = DeadlineDialog.Editor(deadline) },
                             onLongClick = { dialog = DeadlineDialog.Menu(deadline) },
                         )
@@ -182,18 +155,20 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
                 }
 
                 if (current.done.isNotEmpty()) {
-                    item(key = "done-label") { SectionLabel(stringResource(R.string.done_upper)) }
-                    itemsIndexed(items = current.done, key = { _, deadline -> deadline.id }) { index, deadline ->
+                    item(key = "done-label") {
+                        SectionLabel(stringResource(R.string.done_upper))
+                    }
+                    itemsIndexed(
+                        items = current.done,
+                        key = { _, deadline -> deadline.id },
+                    ) { _, deadline ->
                         DoneDeadlineRow(
                             deadline = deadline,
-                            modifier = Modifier.staggerIn(index),
                             onToggleDone = { vm.setDone(deadline, false) },
                             onLongClick = { dialog = DeadlineDialog.Menu(deadline) },
                         )
                     }
                 }
-
-                item(key = "bottom") { Spacer(Modifier.height(8.dp)) }
             }
         }
     }
@@ -209,9 +184,7 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
                 else vm.update(deadline, title, date, type)
                 dialog = null
             },
-            onDelete = d.deadline?.let { deadline ->
-                { dialog = DeadlineDialog.Delete(deadline) }
-            },
+            onDelete = d.deadline?.let { { dialog = DeadlineDialog.Delete(it) } },
         )
 
         is DeadlineDialog.Menu -> OptionsDialog(
@@ -254,58 +227,33 @@ private fun CalendarCard(
     month: YearMonth,
     today: LocalDate,
     deadlines: List<DeadlineEntity>,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
 ) {
     val deadlineDates = remember(deadlines) { deadlines.mapNotNull { it.date }.toSet() }
     val leading = month.atDay(1).dayOfWeek.value % 7
     val cells: List<Int?> = List(leading) { null } + (1..month.lengthOfMonth()).toList()
 
-    LvCard {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 32.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LvIconButton(
-                iconRes = R.drawable.ic_chevron_up,
-                contentDescription = stringResource(R.string.cd_prev_month),
-                onClick = onPrev,
-                iconSize = 16.dp,
-                rotationDegrees = -90f,
-                touchSize = 28.dp,
-            )
-            MonoText(
-                text = DateText.monthYear(month.atDay(1)),
-                fontSize = 13.sp,
-                modifier = Modifier.weight(1f),
-            )
-            LvIconButton(
-                iconRes = R.drawable.ic_chevron_down,
-                contentDescription = stringResource(R.string.cd_next_month),
-                onClick = onNext,
-                iconSize = 16.dp,
-                rotationDegrees = 90f,
-                touchSize = 28.dp,
-            )
-        }
-
+    Card {
+        AppText(
+            text = DateText.monthYear(month.atDay(1)),
+            style = T.Mono13,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         Row(modifier = Modifier.fillMaxWidth()) {
             "SMTWTFS".forEach { letter ->
-                Text(
+                AppText(
                     text = letter.toString(),
-                    color = LvMuted,
-                    fontFamily = Mono,
-                    fontSize = 11.sp,
-                    modifier = Modifier.weight(1f),
+                    style = T.Label11,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
-
         cells.chunked(7).forEach { week ->
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
+            ) {
                 week.forEach { day ->
                     if (day == null) {
                         Box(modifier = Modifier.weight(1f).height(30.dp))
@@ -313,183 +261,164 @@ private fun CalendarCard(
                         val date = month.atDay(day)
                         val isToday = date == today
                         val hasDeadline = deadlineDates.contains(date.toString())
-                        Column(
+                        Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(30.dp)
-                                .padding(horizontal = 1.dp)
                                 .then(
                                     if (isToday) {
-                                        Modifier
-                                            .border(1.dp, LvMuted, RoundedCornerShape(8.dp))
+                                        Modifier.border(1.dp, C.Muted, RoundedCornerShape(8.dp))
                                     } else {
                                         Modifier
                                     }
                                 ),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = day.toString(), color = LvText, fontSize = 12.sp)
-                            Box(
-                                modifier = Modifier
-                                    .padding(top = 1.dp)
-                                    .size(5.dp)
-                                    .clip(CircleShape)
-                                    .background(if (hasDeadline) LvAccent else Color.Transparent),
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                AppText(text = day.toString(), style = T.Body12)
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = 1.dp)
+                                        .size(5.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (hasDeadline) C.Red else C.Red.copy(alpha = 0f)
+                                        ),
+                                )
+                            }
                         }
                     }
                 }
                 repeat(7 - week.size) {
-                    Box(modifier = Modifier.weight(1f))
+                    Box(modifier = Modifier.weight(1f).height(30.dp))
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DeadlineListRow(
     deadline: DeadlineEntity,
     today: LocalDate,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onToggleDone: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val days = max(0L, deadline.daysLeft(today) ?: 0L)
     val date = DateText.parse(deadline.date)
-    val interaction = remember { MutableInteractionSource() }
+    val days = (deadline.daysLeft(today) ?: 0L).coerceAtLeast(0L)
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(LvSurface)
-            .combinedClickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-            .pressScale(interaction)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .background(C.Surface)
+            .appClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        LvCheckbox(checked = false, onToggle = onToggleDone, size = 18.dp)
-        Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
-            Text(text = deadline.title, color = LvText, fontSize = 14.sp)
+        Column(modifier = Modifier.weight(1f)) {
+            AppText(
+                text = deadline.title,
+                style = T.Body14,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (date != null) {
-                Text(
-                    text = DateText.header(date),
-                    color = LvMuted,
-                    fontFamily = Mono,
-                    fontSize = 12.sp,
-                )
+                AppText(text = DateText.header(date), style = T.Mono12Muted)
             }
         }
+        Spacer(Modifier.width(10.dp))
         Countdown(days)
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DeadlineTimelineRow(
     deadline: DeadlineEntity,
     today: LocalDate,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val days = max(0L, deadline.daysLeft(today) ?: 0L)
     val date = DateText.parse(deadline.date)
-    val interaction = remember { MutableInteractionSource() }
-    Row(
-        modifier = modifier
+    val days = (deadline.daysLeft(today) ?: 0L).coerceAtLeast(0L)
+    Box(
+        modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .combinedClickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = onClick,
-                onLongClick = onLongClick,
-            )
-            .pressScale(interaction),
+            .padding(start = 6.dp)
+            .drawBehind {
+                drawLine(
+                    color = C.Border,
+                    start = Offset(0f, 0f),
+                    end = Offset(0f, size.height),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            },
     ) {
         Box(
             modifier = Modifier
-                .width(16.dp)
-                .fillMaxHeight(),
-        ) {
-            Box(
-                modifier = Modifier
-                    .offset(x = 4.dp)
-                    .width(1.dp)
-                    .fillMaxHeight()
-                    .background(LvBorder),
-            )
-            Box(
-                modifier = Modifier
-                    .offset(x = 0.dp, y = 3.dp)
-                    .size(9.dp)
-                    .clip(CircleShape)
-                    .background(LvAccent),
-            )
-        }
+                .offset(x = (-5).dp, y = 3.dp)
+                .size(9.dp)
+                .clip(CircleShape)
+                .background(C.Red),
+        )
         Row(
             modifier = Modifier
-                .weight(1f)
-                .padding(start = 8.dp, bottom = 14.dp),
+                .fillMaxWidth()
+                .appClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(start = 18.dp, bottom = 14.dp),
             verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 if (date != null) {
-                    MonoText(text = DateText.header(date), fontSize = 12.sp, color = LvMuted)
+                    AppText(text = DateText.header(date), style = T.Mono12Muted)
                 }
-                Text(text = deadline.title, color = LvText, fontSize = 14.sp)
+                AppText(
+                    text = deadline.title,
+                    style = T.Body14,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
+            Spacer(Modifier.width(10.dp))
             Countdown(days)
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DoneDeadlineRow(
     deadline: DeadlineEntity,
     onToggleDone: () -> Unit,
     onLongClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val doneDate = deadline.doneDate?.let { DateText.parse(it) }
-    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(LvSurface)
-            .combinedClickable(
-                interactionSource = interaction,
-                indication = null,
-                onClick = onToggleDone,
-                onLongClick = onLongClick,
-            )
-            .pressScale(interaction)
+            .background(C.Surface)
+            .appClickable(onClick = {}, onLongClick = onLongClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        LvCheckbox(checked = true, onToggle = onToggleDone, size = 18.dp)
-        Text(
+        RedCheckbox(
+            done = true,
+            size = 18.dp,
+            onToggle = onToggleDone,
+        )
+        AppText(
             text = deadline.title,
-            color = LvMuted,
-            fontSize = 13.sp,
+            style = T.Body13Muted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         if (doneDate != null) {
-            MonoText(text = DateText.short(doneDate), fontSize = 12.sp, color = LvMuted)
+            AppText(text = DateText.short(doneDate), style = T.Mono12Muted)
         }
     }
 }
@@ -497,14 +426,8 @@ private fun DoneDeadlineRow(
 @Composable
 private fun Countdown(days: Long) {
     Column(horizontalAlignment = Alignment.End) {
-        MonoText(
-            text = days.toString(),
-            fontSize = 24.sp,
-            color = LvAccent,
-            lineHeight = 24.sp,
-            maxLines = 1,
-        )
-        Text(text = stringResource(R.string.days_left), color = LvMuted, fontSize = 11.sp)
+        AppText(text = days.toString(), style = T.Big24Red, maxLines = 1)
+        AppText(text = stringResource(R.string.days_left), style = T.Body11Muted)
     }
 }
 
@@ -536,39 +459,43 @@ private fun DeadlineEditorDialog(
     fun pickDate() {
         DatePickerDialog(
             context,
-            { _, year, month, day ->
-                date = LocalDate.of(year, month + 1, day)
-            },
+            { _, year, month, day -> date = LocalDate.of(year, month + 1, day) },
             date.year,
             date.monthValue - 1,
             date.dayOfMonth,
         ).show()
     }
 
-    LvDialog(
+    AppDialog(
         onDismiss = onDismiss,
         title = stringResource(if (initial == null) R.string.add_deadline else R.string.edit_deadline),
     ) {
-        LvTextField(
+        AppTextField(
             value = title,
             onValueChange = { title = it },
             placeholder = stringResource(R.string.deadline_title),
         )
-        Spacer(Modifier.height(10.dp))
-        Text(stringResource(R.string.deadline_date), color = LvMuted, fontSize = 11.sp, fontFamily = Mono)
+        AppText(
+            text = stringResource(R.string.deadline_date),
+            style = T.Label11,
+            modifier = Modifier.padding(top = 10.dp),
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 6.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .border(0.5.dp, LvBorder, RoundedCornerShape(8.dp))
-                .lvClickable { pickDate() }
-                .padding(horizontal = 10.dp, vertical = 11.dp),
+                .border(0.5.dp, C.Border, RoundedCornerShape(8.dp))
+                .appClickable(onClick = ::pickDate)
+                .padding(horizontal = 10.dp, vertical = 9.dp),
         ) {
-            MonoText(text = DateText.header(date), fontSize = 13.sp)
+            AppText(text = DateText.header(date), style = T.Mono13)
         }
-        Spacer(Modifier.height(10.dp))
-        Text(stringResource(R.string.deadline_type), color = LvMuted, fontSize = 11.sp, fontFamily = Mono)
+        AppText(
+            text = stringResource(R.string.deadline_type),
+            style = T.Label11,
+            modifier = Modifier.padding(top = 10.dp),
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -576,11 +503,10 @@ private fun DeadlineEditorDialog(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             DeadlineType.entries.forEach { option ->
-                LvChip(
+                Chip(
                     text = typeLabel(option),
                     active = type == option,
                     onClick = { type = option },
-                    fontSize = 11.sp,
                 )
             }
         }
@@ -592,22 +518,17 @@ private fun DeadlineEditorDialog(
                 null
             },
             onDismiss = onDismiss,
-            extra = if (onDelete != null) {
+            extra = onDelete?.let {
                 {
-                    Box(
+                    AppText(
+                        text = stringResource(R.string.delete),
+                        style = T.Body12,
+                        color = C.Red,
                         modifier = Modifier
-                            .lvClickable(onClick = onDelete)
-                            .padding(vertical = 6.dp, horizontal = 4.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.delete),
-                            color = LvAccent,
-                            fontSize = 12.sp,
-                        )
-                    }
+                            .appClickable(onClick = it)
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
+                    )
                 }
-            } else {
-                null
             },
         )
     }
