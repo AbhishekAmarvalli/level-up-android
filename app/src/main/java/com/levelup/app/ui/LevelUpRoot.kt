@@ -6,7 +6,15 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -46,6 +57,7 @@ import com.levelup.app.LevelUpApp
 import com.levelup.app.R
 import com.levelup.app.ui.components.DialogActions
 import com.levelup.app.ui.components.LvDialog
+import com.levelup.app.ui.components.pressScale
 import com.levelup.app.ui.deadlines.DeadlinesScreen
 import com.levelup.app.ui.roadmap.RoadmapScreen
 import com.levelup.app.ui.settings.SettingsScreen
@@ -113,20 +125,33 @@ fun LevelUpRoot(selectedTab: Tab, onTabSelected: (Tab) -> Unit) {
             }
         },
     ) { padding ->
+        val density = LocalDensity.current
+        val pixelSlide = with(density) { 8.dp.roundToPx() }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            when {
-                showSettings -> SettingsScreen(onBack = { showSettings = false })
-                selectedTab == Tab.TODAY -> TodayScreen(
-                    onOpenSettings = { showSettings = true },
-                )
-
-                selectedTab == Tab.ROADMAP -> RoadmapScreen()
-                selectedTab == Tab.DEADLINES -> DeadlinesScreen()
-                selectedTab == Tab.SPEAKING -> SpeakingScreen()
+            AnimatedContent(
+                targetState = if (showSettings) null else selectedTab,
+                transitionSpec = {
+                    (fadeIn(tween(200)) + slideInVertically(
+                        animationSpec = tween(200),
+                        initialOffsetY = { pixelSlide },
+                    )) togetherWith (fadeOut(tween(150)) + slideOutVertically(
+                        animationSpec = tween(200),
+                        targetOffsetY = { -pixelSlide },
+                    ))
+                },
+                label = "tabTransition",
+            ) { target ->
+                when (target) {
+                    null -> SettingsScreen(onBack = { showSettings = false })
+                    Tab.TODAY -> TodayScreen(onOpenSettings = { showSettings = true })
+                    Tab.ROADMAP -> RoadmapScreen()
+                    Tab.DEADLINES -> DeadlinesScreen()
+                    Tab.SPEAKING -> SpeakingScreen()
+                }
             }
         }
     }
@@ -173,16 +198,24 @@ private fun BottomTabBar(selected: Tab, onSelected: (Tab) -> Unit) {
             .navigationBarsPadding()
             .padding(top = 8.dp, bottom = 12.dp),
     ) {
+        val haptic = LocalHapticFeedback.current
         Tab.entries.forEach { tab ->
+            val interaction = remember(tab) { MutableInteractionSource() }
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .heightIn(min = 48.dp)
                     .selectable(
                         selected = tab == selected,
+                        interactionSource = interaction,
+                        indication = null,
                         role = Role.Tab,
-                        onClick = { onSelected(tab) },
-                    ),
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSelected(tab)
+                        },
+                    )
+                    .pressScale(interaction),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(

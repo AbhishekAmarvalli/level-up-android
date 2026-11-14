@@ -12,7 +12,12 @@ import android.widget.Toast
 import android.widget.VideoView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +30,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,8 +60,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -99,6 +106,9 @@ import com.levelup.app.ui.components.LvSwitch
 import com.levelup.app.ui.components.MonoText
 import com.levelup.app.ui.components.OptionsDialog
 import com.levelup.app.ui.components.SectionLabel
+import com.levelup.app.ui.components.lvClickable
+import com.levelup.app.ui.components.pressScale
+import com.levelup.app.ui.components.staggerIn
 import com.levelup.app.ui.theme.LvAccent
 import com.levelup.app.ui.theme.LvBg
 import com.levelup.app.ui.theme.LvBorder
@@ -106,6 +116,7 @@ import com.levelup.app.ui.theme.LvMuted
 import com.levelup.app.ui.theme.LvSurface
 import com.levelup.app.ui.theme.LvText
 import com.levelup.app.ui.theme.Mono
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -122,6 +133,7 @@ private const val MAX_SECONDS = 300
 fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val recorder = remember { CameraRecorder(context) }
     val hasPermissions = rememberCameraPermissions()
     var requestedOnce by rememberSaveable { mutableStateOf(false) }
@@ -225,13 +237,13 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 14.dp)
-                    .padding(top = 4.dp, bottom = 16.dp),
+                    .padding(top = 4.dp, bottom = 12.dp),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 2.dp, bottom = 10.dp)
-                        .heightIn(min = 44.dp),
+                        .heightIn(min = 36.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     MonoText(text = stringResource(R.string.speaking), fontSize = 16.sp)
@@ -304,11 +316,19 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 10.dp)
-                            .aspectRatio(4f / 3f)
+                            .height(150.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(LvSurface),
                     ) {
                         CameraPreview(recorder = recorder, modifier = Modifier.fillMaxSize())
+                        Text(
+                            text = stringResource(R.string.front_camera_preview),
+                            color = LvMuted,
+                            fontSize = 11.sp,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 10.dp, top = 8.dp),
+                        )
                         if (recording) {
                             Row(
                                 modifier = Modifier
@@ -328,21 +348,52 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                         }
                     }
 
+                    val pulse = rememberInfiniteTransition(label = "recordPulse")
+                    val ringScale by pulse.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.16f,
+                        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Restart),
+                        label = "recordRingScale",
+                    )
+                    val ringAlpha by pulse.animateFloat(
+                        initialValue = 0.5f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Restart),
+                        label = "recordRingAlpha",
+                    )
+                    val recordInteraction = remember { MutableInteractionSource() }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
+                        if (recording) {
+                            Box(
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .graphicsLayer {
+                                        scaleX = ringScale
+                                        scaleY = ringScale
+                                        alpha = ringAlpha
+                                    }
+                                    .border(1.5.dp, LvAccent, CircleShape),
+                            )
+                        }
                         Box(
                             modifier = Modifier
                                 .size(76.dp)
                                 .clip(CircleShape)
                                 .background(LvSurface)
                                 .border(1.5.dp, LvBorder, CircleShape)
-                                .clickable {
+                                .clickable(
+                                    interactionSource = recordInteraction,
+                                    indication = null,
+                                ) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     if (recording) recorder.stop() else startRecording()
-                                },
+                                }
+                                .pressScale(recordInteraction),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -368,15 +419,20 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                 ) {
                     repeat(30) { index ->
                         val multiplier = 0.35f + 0.65f * abs(sin(barPhase + index * 0.55f))
-                        val height = if (recording) {
+                        val target = if (recording) {
                             (6f + smoothAmplitude * 30f * multiplier).dp
                         } else {
                             6.dp
                         }
+                        val barHeight by animateDpAsState(
+                            targetValue = target,
+                            animationSpec = tween(120),
+                            label = "waveBar$index",
+                        )
                         Box(
                             modifier = Modifier
                                 .width(3.dp)
-                                .height(height)
+                                .height(barHeight)
                                 .clip(RoundedCornerShape(1.5.dp))
                                 .background(if (recording) LvText else LvMuted),
                         )
@@ -404,10 +460,11 @@ fun SpeakingScreen(vm: SpeakingViewModel = viewModel()) {
                         fontSize = 12.sp,
                     )
                 } else {
-                    current.clips.forEach { clip ->
+                    current.clips.forEachIndexed { index, clip ->
                         ClipRow(
                             clip = clip,
                             backupEnabled = current.settings.backupEnabled,
+                            modifier = Modifier.staggerIn(index),
                             onPlay = {
                                 if (File(clip.filePath).exists()) {
                                     playerPath = clip.filePath
@@ -545,18 +602,25 @@ private fun ClipRow(
     backupEnabled: Boolean,
     onPlay: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val thumbnail by produceState<Bitmap?>(initialValue = null, clip.filePath) {
         value = withContext(Dispatchers.IO) { extractThumbnail(clip.filePath) }
     }
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(LvSurface)
-            .clickable(onClick = onPlay)
-            .padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onPlay,
+            )
+            .pressScale(interaction)
+            .padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -604,6 +668,7 @@ private fun ClipRow(
             contentDescription = stringResource(R.string.cd_delete),
             onClick = onDelete,
             iconSize = 17.dp,
+            touchSize = 28.dp,
         )
     }
 }
@@ -636,7 +701,7 @@ private fun CloudStatus(clip: ClipEntity) {
             Text(
                 text = label,
                 color = LvMuted,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
                 maxLines = 1,
             )
         }
@@ -691,15 +756,14 @@ private fun StorageCard(
     val quota = state.quota
     val percent = quota?.percent ?: 0
 
-    LvCard {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 44.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.backup_to_drive),
+    LvCard {            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 32.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.backup_to_drive),
                 color = LvText,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f),
@@ -766,7 +830,7 @@ private fun StorageCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 36.dp)
-                    .clickable(onClick = onCapClick)
+                    .lvClickable(onClick = onCapClick)
                     .padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -861,7 +925,7 @@ private fun StorageCard(
                     color = LvText,
                     fontSize = 11.sp,
                     modifier = Modifier
-                        .clickable(onClick = onRefresh)
+                        .lvClickable(onClick = onRefresh)
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }

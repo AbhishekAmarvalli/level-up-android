@@ -156,6 +156,9 @@ No storage permission is required: clips live in the app's private `files/clips`
   run for about two seconds, exactly once per day when the Minimum first completes.
 - **Activity**: the 7-day view uses real per-day percentages, labelled by the actual
   weekday and ending today. The 4-week view averages four consecutive 7-day windows.
+  Both are drawn as a monotone curved line chart (2.5 dp red line, 28% gradient fill,
+  0/50/100 grid, reveal animation and a press/drag tooltip), in the Today card and in
+  the Activity widget via the same geometry rendered to a bitmap.
 - **Speaking**: CameraX front camera, 720p, real audio; a 5:00 countdown auto-stops and
   saves. The 30-bar waveform is driven by `AudioStats.getAudioAmplitude()` from the real
   recording status events. Clips get a real first-frame thumbnail, in-app playback and
@@ -208,8 +211,9 @@ No storage permission is required: clips live in the app's private `files/clips`
     storage refresh and upload preparation.
 12. **Widget rendering** is controlled by the launcher's grid and resizing. The widget
     controls match the HTML, but exact pixel dimensions vary by device/launcher.
-13. **Accessibility**: icon buttons and primary navigation targets are 44 dp or larger.
-    Filter chips and small text buttons intentionally keep the prototype's compact sizes.
+13. **Accessibility**: primary rows and navigation targets stay comfortably tappable,
+    while checkboxes, switches, chips and icon buttons deliberately keep the prototype's
+    compact 16–34 dp visual sizes to preserve the 1:1 HTML geometry.
 14. The HTML demo's App/Home switcher, fake phone frame, 9:41/5G status bar, wave
     randomness, fake clips, hard-coded streak/activity/date values and "simulate usage"
     control are removed, as required.
@@ -241,7 +245,9 @@ No storage permission is required: clips live in the app's private `files/clips`
 The debug APK was built successfully in this workspace. Camera, real Drive calls, widget
 rendering and notification delivery require a physical device / configured OAuth client,
 which are not available in the build environment, so those were verified by code review
-and compilation rather than by running on hardware.
+and compilation rather than by running on hardware. No emulator or connected device was
+available for screenshot comparison; the visual pass was checked statically against the
+HTML at 1 CSS px = 1 dp.
 
 ---
 
@@ -253,8 +259,9 @@ and compilation rather than by running on hardware.
 | **Today** NEXT STEP card | **Matches**; mono 15 title, 12 muted phase, primary/secondary buttons, "All lessons done." fallback. |
 | **Today** STREAK and NEXT DEADLINE cards | **Matches**; equal-width cards, red 30 numbers, 7 dots, next deadline title. |
 | **Today** Bad day / Exam mode switches | **Matches**; custom 34×20 switch; auto label includes the real days remaining. |
-| **Today** MINIMUM / NORMAL / BONUS groups | **Matches**; empty groups hidden, done rows muted with strikethrough. Swipe gesture hint removed and real swipe/long-press gestures added. |
-| **Today** celebration | **Matches**; red inner glow, 20 confetti pieces in red/off-white/grey, centered streak message, ~2 s, once per day. |
+| **Today** MINIMUM / NORMAL / BONUS groups | **Matches**; empty groups hidden, 20 dp checkbox, 11×12 row padding, 6 dp gap, animated strike-through, completion flash and haptics. Swipe gesture hint removed and real swipe/long-press gestures added. |
+| **Today** Activity card | **Matches the HTML activity card**; real DayRecord data, 7-day/4-week chips, 28 sp red average, 110 dp curved line chart with grid, reveal animation and press/drag tooltip. |
+| **Today** celebration | **Matches**; red inner glow, 20 Canvas confetti pieces with rotation and drift, “Minimum done.” plus “N day streak” on one line, ~2 s, once per day. |
 | **Roadmap** title + Expand all | **Matches**; added a "+" to create phases (required by the brief). |
 | **Roadmap** timeline, nodes, percentages, bars | **Matches**; 1 px line, 19 dp nodes, red complete/white current/grey otherwise, 4 px progress, "x of y lessons". |
 | **Roadmap** lesson rows | **Matches**; red check/strikethrough, empty circle, NEXT tag and external-link icon. Long-press adds rename/reorder/delete and URL editing. |
@@ -263,19 +270,19 @@ and compilation rather than by running on hardware.
 | **Deadlines** countdown | **Matches**; red mono 24 number and "days left". |
 | **Deadlines** DONE section | **Matches**; driven by real completed deadlines, checked box, title and completion date ("6 Nov" style). A checkbox was added to active rows as required. |
 | **Speaking** prompt card | **Matches**; label, prompt, red mono 26 countdown (`05:00`). Prompts rotate daily and are editable. |
-| **Speaking** camera area | **Real CameraX front preview** replacing the fake box; taller 4:3 area, rounded 14, REC dot/label only while recording. |
+| **Speaking** camera area | **Real CameraX front preview** replacing the fake box; 150 dp tall, rounded 14, “Front camera preview” label and REC dot/label only while recording. |
 | **Speaking** record button | **Matches**; 76 dp circle, surface fill, 1.5 border, red video/stop icon. |
 | **Speaking** waveform | **Real microphone amplitude** from CameraX, 30 bars 3×3, 6 dp idle muted, moving off-white bars while recording. |
 | **Speaking** helper text | **Matches**; idle/recording copy exactly as the HTML. |
 | **Speaking** SAVED CLIPS | **Matches**; "Clip N", duration, 40 dp real-frame thumbnail with play icon, cloud state (only when backup is on), trash and in-app playback. Empty state "No clips yet." |
 | **Speaking** STORAGE | **Matches** layout and copy; real Drive quota. The single Wi-Fi switch becomes the required three upload-mode chips. Cloud icons show only when backup is on. 80%/90% copy is exact. |
 | **Speaking** WEEKLY REVIEW CHECKLIST | **Matches**; hint text and six selectable chips, saved per ISO week. |
-| **Bottom tabs** | **Matches**; 4 tabs, 0.5 top border, red active, muted inactive, 22 dp icons, 11 sp labels. |
+| **Bottom tabs** | **Matches**; custom bar with no pill/no elevation, 0.5 top border, red active, muted inactive, 22 dp icons and 11 sp labels; 200 ms crossfade + 8 dp tab slide. |
 | **App / Home screen switcher, phone frame, fake status bar, 720×1604 label** | **Removed** as required; real status/navigation bars with insets. |
 | **Simulate usage / fake 9.2 GB** | **Removed**; real Drive "about" usage. |
 | **Coming Up widget** | **Matches**; 56 sp red days, "days", title/date, two next rows with 0.5 dividers. |
 | **Today widget** | **Matches**; 16 dp checkboxes, task titles, done strikethrough, taps toggle without opening the app. |
-| **Activity widget** | **Matches**; real 7-day/4-week chart, last bar off-white, others #5F6673, red average, "of tasks done, average", tappable range chips. |
+| **Activity widget** | **Matches**; real 7-day/4-week monotone curved chart rendered to a bitmap (same curve, 28% gradient, points, grid and labels), red 28 sp average, "of tasks done, average", tappable range chips. |
 | **Streak + Next Step widget** | **Matches**; two cards, red streak, 7 dots, three tier bars, next lesson/phase or "All done". Tier bars have a fixed compact width inside the resizable widget. |
 | **Fake clips, random waveform, fake timer, hard-coded streak/activity/dates** | **Replaced** with real recording, real amplitude, real time and Room data. |
 

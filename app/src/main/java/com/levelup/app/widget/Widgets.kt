@@ -51,8 +51,6 @@ import com.levelup.app.domain.displayTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import kotlin.math.max
-import kotlin.math.roundToInt
 
 private val BG = ColorProvider(R.color.lv_bg)
 private val SURFACE = ColorProvider(R.color.lv_surface)
@@ -60,7 +58,6 @@ private val BORDER = ColorProvider(R.color.lv_border)
 private val TEXT = ColorProvider(R.color.lv_text)
 private val MUTED = ColorProvider(R.color.lv_muted)
 private val ACCENT = ColorProvider(R.color.lv_accent)
-private val INACTIVE_BAR = ColorProvider(R.color.lv_bar_inactive)
 
 private val TaskIdKey = ActionParameters.Key<Long>("task_id")
 
@@ -293,6 +290,13 @@ class ActivityWidget : GlanceAppWidget() {
         val monthLabel = context.getString(R.string.widget_4weeks)
         val averageSuffix = context.getString(R.string.of_tasks_done_average)
         val sevenDays = data.range == ActivityRange.WEEK
+        val chart = withContext(Dispatchers.Default) {
+            ActivityChartBitmap.render(
+                context = context,
+                values = data.activity.values.map { it.toFloat() },
+                labels = data.activity.labels,
+            )
+        }
         provideContent {
             WidgetFrame("today") {
                 Row(
@@ -325,34 +329,14 @@ class ActivityWidget : GlanceAppWidget() {
                         modifier = GlanceModifier.padding(start = 6.dp, bottom = 3.dp),
                     )
                 }
-                Row(
+                Image(
+                    provider = ImageProvider(chart),
+                    contentDescription = label,
                     modifier = GlanceModifier
                         .fillMaxWidth()
-                        .height(80.dp)
+                        .height(110.dp)
                         .padding(top = 4.dp),
-                    verticalAlignment = Alignment.Bottom,
-                ) {
-                    data.activity.values.forEachIndexed { index, value ->
-                        Column(
-                            modifier = GlanceModifier.defaultWeight(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalAlignment = Alignment.Bottom,
-                        ) {
-                            Box(
-                                GlanceModifier
-                                    .width(if (sevenDays) 14.dp else 28.dp)
-                                    .height(max(3, (value * 0.55f).roundToInt()).dp)
-                                    .cornerRadius(4.dp)
-                                    .background(
-                                        if (index == data.activity.values.lastIndex) TEXT
-                                        else INACTIVE_BAR
-                                    ),
-                            ) {}
-                            VSpace(4)
-                            WidgetText(data.activity.labels[index], 11, MUTED, mono = false)
-                        }
-                    }
-                }
+                )
                 ThinDivider()
             }
         }
@@ -393,7 +377,7 @@ class StreakNextWidget : GlanceAppWidget() {
                                         .cornerRadius(5.dp)
                                         .background(if (active) ACCENT else BORDER)
                                 ) {}
-                                HSpace(3)
+                                HSpace(4)
                             }
                         }
                         data.tierProgress.forEach { tier ->

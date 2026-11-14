@@ -107,6 +107,7 @@
     <string name="record_hint">Tap to record a video clip.</string>
     <string name="recording_hint">Recording video and audio. Tap to stop.</string>
     <string name="rec">REC</string>
+    <string name="front_camera_preview">Front camera preview</string>
     <string name="storage">STORAGE</string>
     <string name="backup_to_drive">Back up videos to Google Drive</string>
     <string name="clips_local_only">Clips stay on this phone only.</string>
@@ -121,7 +122,7 @@
     <string name="cap_value">%1$d MB</string>
     <string name="google_storage_used">Google storage used</string>
     <string name="storage_status_ok">Uploads pause automatically at 90%, before the limit.</string>
-    <string name="storage_status_warn">Storage is over 80%. Uploads pause at 90%.</string>
+    <string name="storage_status_warn" formatted="false">Storage is over 80%. Uploads pause at 90%.</string>
     <string name="storage_status_paused">Uploads paused at 90%. Delete old clips or free space to continue.</string>
     <string name="storage_unlimited">%1$s used</string>
     <string name="storage_of_limit">%1$s of %2$s GB</string>
@@ -220,6 +221,7 @@
     <string name="widget_7days">7 days</string>
     <string name="widget_4weeks">4 weeks</string>
     <string name="of_tasks_done_average">of tasks done, average</string>
+    <string name="activity_empty">Complete tasks to see your trend</string>
     <string name="widget_min">Min</string>
     <string name="widget_norm">Norm</string>
     <string name="widget_bonus">Bonus</string>

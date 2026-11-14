@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.levelup.app.LevelUpApp
 import com.levelup.app.data.CoreData
+import com.levelup.app.data.DayRecordEntity
 import com.levelup.app.data.TaskEntity
 import com.levelup.app.domain.DateText
 import com.levelup.app.domain.Modes
@@ -35,6 +36,7 @@ data class TodayUiState(
     val nextDeadlineTitle: String?,
     val nextDeadlineDays: Long?,
     val minComplete: Boolean,
+    val records: Map<LocalDate, DayRecordEntity>,
 )
 
 class TodayViewModel(application: Application) : AndroidViewModel(application) {
@@ -66,6 +68,7 @@ class TodayViewModel(application: Application) : AndroidViewModel(application) {
             minComplete = visible.filter { it.task.tier == 0 }.let { list ->
                 list.isNotEmpty() && list.all { it.done }
             },
+            records = records,
         )
     }
 

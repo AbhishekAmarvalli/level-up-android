@@ -1,5 +1,8 @@
 package com.levelup.app.ui.today
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,16 +40,22 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,9 +64,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.levelup.app.R
 import com.levelup.app.data.TaskEntity
+import com.levelup.app.domain.ActivityModel
+import com.levelup.app.domain.ActivityRange
 import com.levelup.app.domain.DateText
 import com.levelup.app.domain.TaskState
+import com.levelup.app.domain.activityModel
 import com.levelup.app.domain.displayTitle
+import com.levelup.app.ui.components.ActivityLineChart
 import com.levelup.app.ui.components.CardLabel
 import com.levelup.app.ui.components.ConfirmDialog
 import com.levelup.app.ui.components.DialogActions
@@ -65,6 +78,10 @@ import com.levelup.app.ui.components.LvCard
 import com.levelup.app.ui.components.LvCheckbox
 import com.levelup.app.ui.components.LvChip
 import com.levelup.app.ui.components.LvDialog
+import com.levelup.app.ui.components.StreakDots
+import com.levelup.app.ui.components.animatedCount
+import com.levelup.app.ui.components.pressScale
+import com.levelup.app.ui.components.staggerIn
 import com.levelup.app.ui.components.LvIconButton
 import com.levelup.app.ui.components.LvPrimaryButton
 import com.levelup.app.ui.components.LvSecondaryButton
@@ -79,6 +96,7 @@ import com.levelup.app.ui.theme.LvMuted
 import com.levelup.app.ui.theme.LvSurface
 import com.levelup.app.ui.theme.LvText
 import com.levelup.app.ui.theme.Mono
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -96,6 +114,7 @@ fun TodayScreen(
     var editorTask by remember { mutableStateOf<TaskEntity?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
+    var activityRange by rememberSaveable { mutableStateOf("7d") }
 
     LaunchedEffect(Unit) {
         vm.celebration.collect { streak -> celebrationStreak = streak }
@@ -106,30 +125,35 @@ fun TodayScreen(
         if (current != null) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
             ) {
                 item(key = "header") {
-                    TodayHeader(
-                        dateLabel = DateText.header(current.today),
-                        examActive = current.modes.examMode,
-                        onAddTask = {
-                            editorTask = null
-                            showEditor = true
-                        },
-                        onOpenSettings = onOpenSettings,
-                    )
+                    Box(Modifier.staggerIn(0)) {
+                        TodayHeader(
+                            dateLabel = DateText.header(current.today),
+                            examActive = current.modes.examMode,
+                            onAddTask = {
+                                editorTask = null
+                                showEditor = true
+                            },
+                            onOpenSettings = onOpenSettings,
+                        )
+                    }
                 }
 
                 item(key = "next") {
-                    NextStepCard(
-                        title = current.nextLesson?.lesson?.title,
-                        phase = current.nextLesson?.phase?.phase?.name,
-                        onMarkDone = vm::markNextLessonDone,
-                        onSkip = vm::skipNextLesson,
-                    )
+                    Box(Modifier.staggerIn(1)) {
+                        NextStepCard(
+                            title = current.nextLesson?.lesson?.title,
+                            phase = current.nextLesson?.phase?.phase?.name,
+                            onMarkDone = vm::markNextLessonDone,
+                            onSkip = vm::skipNextLesson,
+                        )
+                    }
                 }
 
                 item(key = "summary") {
+                    Box(Modifier.staggerIn(2)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -140,25 +164,16 @@ fun TodayScreen(
                         LvCard(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             CardLabel(stringResource(R.string.streak))
                             MonoText(
-                                text = current.streak.toString(),
+                                text = animatedCount(current.streak).toString(),
                                 fontSize = 30.sp,
                                 color = LvAccent,
                                 lineHeight = 33.sp,
                                 modifier = Modifier.padding(top = 2.dp),
                             )
-                            Row(
+                            StreakDots(
+                                dots = current.dots,
                                 modifier = Modifier.padding(top = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                current.dots.forEach { active ->
-                                    Box(
-                                        modifier = Modifier
-                                            .size(9.dp)
-                                            .clip(CircleShape)
-                                            .background(if (active) LvAccent else LvBorder),
-                                    )
-                                }
-                            }
+                            )
                         }
                         LvCard(modifier = Modifier.weight(1f).fillMaxHeight()) {
                             CardLabel(stringResource(R.string.next_deadline))
@@ -179,25 +194,28 @@ fun TodayScreen(
                             )
                         }
                     }
+                    }
                 }
 
                 item(key = "modes") {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        ModeSwitchRow(
-                            label = stringResource(R.string.bad_day_mode),
-                            checked = current.modes.badDay,
-                            onToggle = vm::toggleBadDay,
-                        )
-                        ModeSwitchRow(
-                            label = if (current.modes.examDays != null) {
-                                stringResource(R.string.exam_mode_auto, current.modes.examDays)
-                            } else {
-                                stringResource(R.string.exam_mode)
-                            },
-                            checked = current.modes.examMode,
-                            onToggle = vm::toggleExamMode,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
+                    Box(Modifier.staggerIn(3)) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            ModeSwitchRow(
+                                label = stringResource(R.string.bad_day_mode),
+                                checked = current.modes.badDay,
+                                onToggle = vm::toggleBadDay,
+                            )
+                            ModeSwitchRow(
+                                label = if (current.modes.examDays != null) {
+                                    stringResource(R.string.exam_mode_auto, current.modes.examDays)
+                                } else {
+                                    stringResource(R.string.exam_mode)
+                                },
+                                checked = current.modes.examMode,
+                                onToggle = vm::toggleExamMode,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
                     }
                 }
 
@@ -210,12 +228,16 @@ fun TodayScreen(
                     val group = current.visibleTasks.filter { it.task.tier == tier }
                     if (group.isNotEmpty()) {
                         item(key = "label-$tier") {
-                            SectionLabel(stringResource(groupLabels[tier]))
+                            SectionLabel(
+                                text = stringResource(groupLabels[tier]),
+                                modifier = Modifier.staggerIn(4 + tier),
+                            )
                         }
-                        items(items = group, key = { it.task.id }) { item ->
+                        itemsIndexed(items = group, key = { _, item -> item.task.id }) { index, item ->
                             TaskRow(
                                 state = item,
                                 examMode = current.modes.examMode,
+                                modifier = Modifier.staggerIn(index + 4 + tier),
                                 onToggle = { vm.toggleTask(item.task.id) },
                                 onSkip = {
                                     vm.skipTask(item.task.id)
@@ -239,7 +261,22 @@ fun TodayScreen(
                     }
                 }
 
-                item(key = "bottom") { Spacer(Modifier.height(8.dp)) }
+                item(key = "activity") {
+                    val activity = activityModel(
+                        records = current.records,
+                        today = current.today,
+                        range = if (activityRange == "4w") ActivityRange.MONTH else ActivityRange.WEEK,
+                    )
+                    Box(Modifier.staggerIn(8)) {
+                        ActivityCard(
+                            activity = activity,
+                            range = activityRange,
+                            onRange = { activityRange = it },
+                        )
+                    }
+                }
+
+                item(key = "bottom") { Spacer(Modifier.height(4.dp)) }
             }
         }
 
@@ -265,7 +302,12 @@ fun TodayScreen(
                         color = LvAccent,
                         fontSize = 13.sp,
                         modifier = Modifier
-                            .clickable { data.performAction() }
+                            .clickable(
+                                interactionSource = remember {
+                                    androidx.compose.foundation.interaction.MutableInteractionSource()
+                                },
+                                indication = null,
+                            ) { data.performAction() }
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -321,10 +363,10 @@ private fun TodayHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 2.dp, bottom = 10.dp)
-            .heightIn(min = 44.dp),
+            .heightIn(min = 36.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MonoText(text = dateLabel, fontSize = 16.sp)
+        MonoText(text = dateLabel, fontSize = 16.sp, maxLines = 1)
         Spacer(Modifier.weight(1f))
         if (examActive) {
             Text(
@@ -343,12 +385,14 @@ private fun TodayHeader(
             contentDescription = stringResource(R.string.add_task),
             onClick = onAddTask,
             iconSize = 18.dp,
+            touchSize = 32.dp,
         )
         LvIconButton(
             iconRes = R.drawable.ic_settings,
             contentDescription = stringResource(R.string.cd_settings),
             onClick = onOpenSettings,
             iconSize = 18.dp,
+            touchSize = 32.dp,
         )
     }
 }
@@ -396,16 +440,20 @@ private fun ModeSwitchRow(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 44.dp)
+            .heightIn(min = 30.dp)
             .toggleable(
                 value = checked,
                 role = Role.Switch,
                 indication = null,
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                onValueChange = { onToggle() },
+                onValueChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onToggle()
+                },
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -422,12 +470,36 @@ private fun TaskRow(
     onToggle: () -> Unit,
     onSkip: () -> Unit,
     onLongPress: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val haptic = LocalHapticFeedback.current
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    var flash by remember { mutableStateOf(false) }
+    var wasDone by remember { mutableStateOf(state.done) }
+    LaunchedEffect(state.done) {
+        if (state.done && !wasDone) {
+            flash = true
+            delay(260)
+            flash = false
+        }
+        wasDone = state.done
+    }
+    val rowBackground by animateColorAsState(
+        targetValue = if (flash) lerp(LvSurface, LvAccent, 0.12f) else LvSurface,
+        animationSpec = tween(220),
+        label = "taskFlash",
+    )
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> onToggle()
-                SwipeToDismissBoxValue.EndToStart -> onSkip()
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onToggle()
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onSkip()
+                }
                 SwipeToDismissBoxValue.Settled -> Unit
             }
             false
@@ -437,7 +509,7 @@ private fun TaskRow(
 
     SwipeToDismissBox(
         state = dismissState,
-        modifier = Modifier.padding(bottom = 6.dp),
+        modifier = modifier.padding(bottom = 6.dp),
         enableDismissFromStartToEnd = !state.done,
         enableDismissFromEndToStart = true,
         backgroundContent = {
@@ -472,22 +544,124 @@ private fun TaskRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(LvSurface)
-                .combinedClickable(onClick = onToggle, onLongClick = onLongPress)
+                .background(rowBackground)
+                .combinedClickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggle()
+                    },
+                    onLongClick = onLongPress,
+                )
+                .pressScale(interaction)
                 .padding(vertical = 11.dp, horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             LvCheckbox(checked = state.done)
-            Text(
+            TaskTitle(
                 text = displayTitle(state.task, examMode),
-                color = if (state.done) LvMuted else LvText,
-                fontSize = 14.sp,
-                textDecoration = if (state.done) TextDecoration.LineThrough else TextDecoration.None,
+                done = state.done,
                 modifier = Modifier.weight(1f),
             )
         }
     }
+}
+
+@Composable
+private fun ActivityCard(
+    activity: ActivityModel,
+    range: String,
+    onRange: (String) -> Unit,
+) {
+    LvCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CardLabel(
+                text = stringResource(R.string.widget_activity_label),
+                modifier = Modifier.weight(1f),
+            )
+            LvChip(
+                text = stringResource(R.string.widget_7days),
+                active = range == "7d",
+                onClick = { onRange("7d") },
+                fontSize = 11.sp,
+                horizontalPadding = 8.dp,
+                verticalPadding = 2.dp,
+                radius = 10.dp,
+            )
+            Spacer(Modifier.width(4.dp))
+            LvChip(
+                text = stringResource(R.string.widget_4weeks),
+                active = range == "4w",
+                onClick = { onRange("4w") },
+                fontSize = 11.sp,
+                horizontalPadding = 8.dp,
+                verticalPadding = 2.dp,
+                radius = 10.dp,
+            )
+        }
+        val average = animatedCount(activity.average)
+        Row(
+            modifier = Modifier.padding(top = 6.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            MonoText(
+                text = "$average%",
+                fontSize = 28.sp,
+                color = LvAccent,
+                lineHeight = 30.sp,
+            )
+            Text(
+                text = stringResource(R.string.of_tasks_done_average),
+                color = LvMuted,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 6.dp, bottom = 3.dp),
+            )
+        }
+        ActivityLineChart(
+            values = activity.values.map { it.toFloat() },
+            labels = activity.labels,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun TaskTitle(
+    text: String,
+    done: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    var textWidth by remember { mutableIntStateOf(0) }
+    val lineProgress by animateFloatAsState(
+        targetValue = if (done) 1f else 0f,
+        animationSpec = tween(220),
+        label = "taskStrike",
+    )
+    Text(
+        text = text,
+        color = if (done) LvMuted else LvText,
+        fontSize = 14.sp,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout ->
+            if (layout.lineCount > 0) textWidth = layout.getLineRight(0).toInt()
+        },
+        modifier = modifier.drawBehind {
+            if (textWidth > 0 && lineProgress > 0f) {
+                drawLine(
+                    color = LvMuted,
+                    start = Offset(0f, size.height / 2f),
+                    end = Offset(textWidth * lineProgress, size.height / 2f),
+                    strokeWidth = 1.dp.toPx(),
+                )
+            }
+        },
+    )
 }
 
 @Composable
@@ -553,7 +727,6 @@ private fun TaskEditorDialog(
                             text = stringResource(R.string.delete),
                             color = LvAccent,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }

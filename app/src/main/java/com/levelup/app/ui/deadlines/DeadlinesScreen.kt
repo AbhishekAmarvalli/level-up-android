@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -37,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +66,10 @@ import com.levelup.app.ui.components.LvTextField
 import com.levelup.app.ui.components.MonoText
 import com.levelup.app.ui.components.OptionsDialog
 import com.levelup.app.ui.components.SectionLabel
+import com.levelup.app.ui.components.animatedCount
+import com.levelup.app.ui.components.lvClickable
+import com.levelup.app.ui.components.pressScale
+import com.levelup.app.ui.components.staggerIn
 import com.levelup.app.ui.theme.LvAccent
 import com.levelup.app.ui.theme.LvBorder
 import com.levelup.app.ui.theme.LvMuted
@@ -93,14 +100,14 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
         if (current != null) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
             ) {
                 item(key = "title") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 2.dp, bottom = 10.dp)
-                            .heightIn(min = 44.dp),
+                            .heightIn(min = 36.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         MonoText(text = stringResource(R.string.deadlines), fontSize = 16.sp)
@@ -110,6 +117,7 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
                             contentDescription = stringResource(R.string.add_deadline),
                             onClick = { dialog = DeadlineDialog.Editor(null) },
                             iconSize = 18.dp,
+                            touchSize = 32.dp,
                         )
                     }
                 }
@@ -151,20 +159,22 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
                         )
                     }
                 } else if (mode == "list") {
-                    items(items = current.upcoming, key = { it.id }) { deadline ->
+                    itemsIndexed(items = current.upcoming, key = { _, deadline -> deadline.id }) { index, deadline ->
                         DeadlineListRow(
                             deadline = deadline,
                             today = current.today,
+                            modifier = Modifier.staggerIn(index),
                             onClick = { dialog = DeadlineDialog.Editor(deadline) },
                             onLongClick = { dialog = DeadlineDialog.Menu(deadline) },
                             onToggleDone = { vm.setDone(deadline, true) },
                         )
                     }
                 } else {
-                    items(items = current.upcoming, key = { it.id }) { deadline ->
+                    itemsIndexed(items = current.upcoming, key = { _, deadline -> deadline.id }) { index, deadline ->
                         DeadlineTimelineRow(
                             deadline = deadline,
                             today = current.today,
+                            modifier = Modifier.staggerIn(index),
                             onClick = { dialog = DeadlineDialog.Editor(deadline) },
                             onLongClick = { dialog = DeadlineDialog.Menu(deadline) },
                         )
@@ -173,9 +183,10 @@ fun DeadlinesScreen(vm: DeadlinesViewModel = viewModel()) {
 
                 if (current.done.isNotEmpty()) {
                     item(key = "done-label") { SectionLabel(stringResource(R.string.done_upper)) }
-                    items(items = current.done, key = { it.id }) { deadline ->
+                    itemsIndexed(items = current.done, key = { _, deadline -> deadline.id }) { index, deadline ->
                         DoneDeadlineRow(
                             deadline = deadline,
+                            modifier = Modifier.staggerIn(index),
                             onToggleDone = { vm.setDone(deadline, false) },
                             onLongClick = { dialog = DeadlineDialog.Menu(deadline) },
                         )
@@ -254,7 +265,7 @@ private fun CalendarCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 40.dp),
+                .heightIn(min = 32.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             LvIconButton(
@@ -263,6 +274,7 @@ private fun CalendarCard(
                 onClick = onPrev,
                 iconSize = 16.dp,
                 rotationDegrees = -90f,
+                touchSize = 28.dp,
             )
             MonoText(
                 text = DateText.monthYear(month.atDay(1)),
@@ -275,6 +287,7 @@ private fun CalendarCard(
                 onClick = onNext,
                 iconSize = 16.dp,
                 rotationDegrees = 90f,
+                touchSize = 28.dp,
             )
         }
 
@@ -343,21 +356,29 @@ private fun DeadlineListRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onToggleDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val days = max(0L, deadline.daysLeft(today) ?: 0L)
     val date = DateText.parse(deadline.date)
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(LvSurface)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .pressScale(interaction)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         LvCheckbox(checked = false, onToggle = onToggleDone, size = 18.dp)
-        Column(modifier = Modifier.weight(1f).padding(start = 2.dp)) {
+        Column(modifier = Modifier.weight(1f).padding(start = 10.dp)) {
             Text(text = deadline.title, color = LvText, fontSize = 14.sp)
             if (date != null) {
                 Text(
@@ -379,14 +400,22 @@ private fun DeadlineTimelineRow(
     today: LocalDate,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val days = max(0L, deadline.daysLeft(today) ?: 0L)
     val date = DateText.parse(deadline.date)
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .pressScale(interaction),
     ) {
         Box(
             modifier = Modifier
@@ -431,16 +460,24 @@ private fun DoneDeadlineRow(
     deadline: DeadlineEntity,
     onToggleDone: () -> Unit,
     onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val doneDate = deadline.doneDate?.let { DateText.parse(it) }
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 6.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(LvSurface)
-            .combinedClickable(onClick = onToggleDone, onLongClick = onLongClick)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = onToggleDone,
+                onLongClick = onLongClick,
+            )
+            .pressScale(interaction)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -465,6 +502,7 @@ private fun Countdown(days: Long) {
             fontSize = 24.sp,
             color = LvAccent,
             lineHeight = 24.sp,
+            maxLines = 1,
         )
         Text(text = stringResource(R.string.days_left), color = LvMuted, fontSize = 11.sp)
     }
@@ -524,7 +562,7 @@ private fun DeadlineEditorDialog(
                 .padding(top = 6.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .border(0.5.dp, LvBorder, RoundedCornerShape(8.dp))
-                .clickable { pickDate() }
+                .lvClickable { pickDate() }
                 .padding(horizontal = 10.dp, vertical = 11.dp),
         ) {
             MonoText(text = DateText.header(date), fontSize = 13.sp)
@@ -558,14 +596,13 @@ private fun DeadlineEditorDialog(
                 {
                     Box(
                         modifier = Modifier
-                            .clickable(onClick = onDelete)
+                            .lvClickable(onClick = onDelete)
                             .padding(vertical = 6.dp, horizontal = 4.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.delete),
                             color = LvAccent,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }

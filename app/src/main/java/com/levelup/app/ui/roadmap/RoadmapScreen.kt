@@ -4,10 +4,20 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -40,7 +50,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -69,6 +82,10 @@ import com.levelup.app.ui.components.LvTextField
 import com.levelup.app.ui.components.MonoText
 import com.levelup.app.ui.components.OptionsDialog
 import com.levelup.app.ui.components.SectionLabel
+import com.levelup.app.ui.components.animatedCount
+import com.levelup.app.ui.components.lvClickable
+import com.levelup.app.ui.components.pressScale
+import com.levelup.app.ui.components.staggerIn
 import com.levelup.app.ui.theme.LvAccent
 import com.levelup.app.ui.theme.LvBg
 import com.levelup.app.ui.theme.LvBorder
@@ -119,14 +136,14 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
         if (current != null) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
             ) {
                 item(key = "title") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 2.dp, bottom = 12.dp)
-                            .heightIn(min = 44.dp),
+                            .heightIn(min = 36.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         MonoText(text = stringResource(R.string.roadmap), fontSize = 16.sp)
@@ -136,6 +153,7 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
                             contentDescription = stringResource(R.string.add_phase),
                             onClick = { dialog = RoadmapDialog.PhaseEditor(null) },
                             iconSize = 18.dp,
+                            touchSize = 32.dp,
                         )
                         Text(
                             text = stringResource(R.string.expand_all),
@@ -160,11 +178,12 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
                     }
                 }
 
-                items(items = current.phases, key = { it.phase.id }) { phase ->
+                itemsIndexed(items = current.phases, key = { _, phase -> phase.phase.id }) { index, phase ->
                     val next = current.next
                     val isCurrent = next?.phase?.phase?.id == phase.phase.id
                     val open = if (expandAll) true else (manualOpen[phase.phase.id] ?: isCurrent)
                     PhaseBlock(
+                        modifier = Modifier.staggerIn(index),
                         phase = phase,
                         next = next,
                         open = open,
@@ -305,6 +324,7 @@ fun RoadmapScreen(vm: RoadmapViewModel = viewModel()) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PhaseBlock(
+    modifier: Modifier = Modifier,
     phase: PhaseWithLessons,
     next: NextLesson?,
     open: Boolean,
@@ -323,7 +343,7 @@ private fun PhaseBlock(
     val orderedLessons = phase.lessons.sortedWith(compareBy({ it.sortOrder }, { it.id }))
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
     ) {
@@ -362,28 +382,43 @@ private fun PhaseBlock(
             }
         }
 
+        val haptic = LocalHapticFeedback.current
+        val interaction = remember { MutableInteractionSource() }
+        val chevron by animateFloatAsState(
+            targetValue = if (open) 180f else 0f,
+            animationSpec = tween(200),
+            label = "chevron",
+        )
+        val shownPercent = animatedCount(percent)
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 8.dp, bottom = 12.dp),
+                .padding(start = 8.dp, bottom = 12.dp)
+                .animateContentSize(tween(200)),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(onClick = onToggleOpen, onLongClick = onMenu)
+                    .combinedClickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        onClick = onToggleOpen,
+                        onLongClick = onMenu,
+                    )
+                    .pressScale(interaction)
                     .padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MonoText(text = phase.phase.name, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                MonoText(text = "$percent%", fontSize = 13.sp, color = LvAccent)
+                MonoText(text = "$shownPercent%", fontSize = 13.sp, color = LvAccent)
                 Spacer(Modifier.width(4.dp))
                 Icon(
-                    painter = painterResource(
-                        if (open) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
-                    ),
+                    painter = painterResource(R.drawable.ic_chevron_down),
                     contentDescription = stringResource(R.string.cd_expand_phase),
                     tint = LvMuted,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier
+                        .size(16.dp)
+                        .rotate(chevron),
                 )
             }
             LvProgressBar(
@@ -397,16 +432,26 @@ private fun PhaseBlock(
                 modifier = Modifier.padding(top = 3.dp),
             )
 
-            if (open) {
-                orderedLessons.forEach { lesson ->
-                    val isNext = next?.lesson?.id == lesson.id
-                    LessonRow(
-                        lesson = lesson,
-                        isNext = isNext,
-                        onToggle = { onToggleLesson(lesson) },
-                        onMenu = { onLessonMenu(lesson) },
-                        onOpenLink = { onOpenLink(lesson) },
-                    )
+            AnimatedVisibility(
+                visible = open,
+                enter = expandVertically(tween(200), expandFrom = Alignment.Top) + fadeIn(tween(160)),
+                exit = shrinkVertically(tween(180), shrinkTowards = Alignment.Top) + fadeOut(tween(120)),
+            ) {
+                Column {
+                    orderedLessons.forEachIndexed { index, lesson ->
+                        val isNext = next?.lesson?.id == lesson.id
+                        LessonRow(
+                            modifier = Modifier.staggerIn(index),
+                            lesson = lesson,
+                            isNext = isNext,
+                            onToggle = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onToggleLesson(lesson)
+                            },
+                            onMenu = { onLessonMenu(lesson) },
+                            onOpenLink = { onOpenLink(lesson) },
+                        )
+                    }
                 }
             }
         }
@@ -421,22 +466,30 @@ private fun LessonRow(
     onToggle: () -> Unit,
     onMenu: () -> Unit,
     onOpenLink: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = 4.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(if (isNext) LvSurface else Color.Transparent)
-            .combinedClickable(onClick = {}, onLongClick = onMenu)
-            .padding(start = 4.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = {},
+                onLongClick = onMenu,
+            )
+            .pressScale(interaction)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(24.dp)
                 .clip(CircleShape)
-                .combinedClickable(onClick = onToggle, onLongClick = onMenu),
+                .clickable(onClick = onToggle),
             contentAlignment = Alignment.Center,
         ) {
             if (lesson.done) {
@@ -480,6 +533,7 @@ private fun LessonRow(
             contentDescription = stringResource(R.string.cd_open_link),
             onClick = onOpenLink,
             iconSize = 15.dp,
+            touchSize = 24.dp,
         )
     }
 }
@@ -565,7 +619,6 @@ private fun LessonEditorDialog(
                             text = stringResource(R.string.delete),
                             color = LvAccent,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -116,19 +118,25 @@ fun CelebrationOverlay(streak: Int, onFinished: () -> Unit) {
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = streak.toString(),
-                color = LvAccent,
-                fontFamily = Mono,
-                fontSize = 30.sp,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = stringResource(R.string.day_streak),
-                color = LvText,
-                fontSize = 14.sp,
-            )
+            Spacer(Modifier.height(4.dp))
+            androidx.compose.foundation.layout.Row(
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text(
+                    text = streak.toString(),
+                    color = LvAccent,
+                    fontFamily = Mono,
+                    fontSize = 30.sp,
+                    lineHeight = 30.sp,
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.day_streak),
+                    color = LvText,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 3.dp),
+                )
+            }
         }
     }
 }

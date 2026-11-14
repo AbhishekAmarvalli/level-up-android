@@ -48,6 +48,7 @@ import com.levelup.app.ui.components.LvSwitch
 import com.levelup.app.ui.components.LvTextField
 import com.levelup.app.ui.components.MonoText
 import com.levelup.app.ui.components.OptionsDialog
+import com.levelup.app.ui.components.lvClickable
 import com.levelup.app.ui.components.SectionLabel
 import com.levelup.app.ui.theme.LvBorder
 import com.levelup.app.ui.theme.LvMuted
@@ -132,7 +133,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 44.dp)
-                            .clickable {
+                            .lvClickable {
                                 TimePickerDialog(
                                     context,
                                     { _, hour, minute ->
@@ -205,7 +206,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 44.dp)
-                            .clickable { capDialog = true },
+                            .lvClickable { capDialog = true },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -239,7 +240,7 @@ fun SettingsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 44.dp)
-                                .clickable { promptDialog = PromptEdit(index, prompt, isNew = false) },
+                                .lvClickable { promptDialog = PromptEdit(index, prompt, isNew = false) },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
@@ -254,7 +255,7 @@ fun SettingsScreen(
                                     color = LvMuted,
                                     fontSize = 11.sp,
                                     modifier = Modifier
-                                        .clickable { vm.deletePrompt(index) }
+                                        .lvClickable { vm.deletePrompt(index) }
                                         .padding(horizontal = 8.dp, vertical = 6.dp),
                                 )
                             }
