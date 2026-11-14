@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Level Up</string>
+
+    <!-- Navigation -->
+    <string name="tab_today">Today</string>
+    <string name="tab_roadmap">Roadmap</string>
+    <string name="tab_deadlines">Deadlines</string>
+    <string name="tab_speaking">Speaking</string>
+
+    <!-- Today -->
+    <string name="exam_mode_pill">EXAM MODE</string>
+    <string name="next_step">NEXT STEP</string>
+    <string name="streak">STREAK</string>
+    <string name="next_deadline">NEXT DEADLINE</string>
+    <string name="mark_done">Mark done</string>
+    <string name="skip_for_now">Skip for now</string>
+    <string name="all_lessons_done">All lessons done.</string>
+    <string name="bad_day_mode">Bad day mode</string>
+    <string name="exam_mode">Exam mode</string>
+    <string name="exam_mode_auto">Exam mode (auto, exam in %1$d days)</string>
+    <string name="minimum_upper">MINIMUM</string>
+    <string name="normal_upper">NORMAL</string>
+    <string name="bonus_upper">BONUS</string>
+    <string name="add_task">Add task</string>
+    <string name="task_title">Task title</string>
+    <string name="task_tier">Tier</string>
+    <string name="tier_minimum">Minimum</string>
+    <string name="tier_normal">Normal</string>
+    <string name="tier_bonus">Bonus</string>
+    <string name="ai_tagged">AI-tagged</string>
+    <string name="edit_task">Edit task</string>
+    <string name="delete_task_title">Delete task?</string>
+    <string name="delete_task_message">The task is removed from today. Past days keep their history.</string>
+    <string name="no_deadlines">No deadlines</string>
+    <string name="day_streak">day streak</string>
+    <string name="minimum_done">Minimum done.</string>
+    <string name="all_done">All done</string>
+    <string name="days">days</string>
+    <string name="skip_task_hint">Skipped for today</string>
+    <string name="undo">Undo</string>
+
+    <!-- Common -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="add">Add</string>
+    <string name="close">Close</string>
+    <string name="rename">Rename</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="done_upper">DONE</string>
+    <string name="next_tag">NEXT</string>
+
+    <!-- Roadmap -->
+    <string name="roadmap">Roadmap</string>
+    <string name="expand_all">Expand all</string>
+    <string name="lessons_count">%1$d of %2$d lessons</string>
+    <string name="add_phase">Add phase</string>
+    <string name="add_lesson">Add lesson</string>
+    <string name="edit_lesson">Edit lesson</string>
+    <string name="phase_name">Phase name</string>
+    <string name="lesson_title">Lesson title</string>
+    <string name="lesson_url">Link (optional)</string>
+    <string name="open_link">Open link</string>
+    <string name="edit_link">Edit link</string>
+    <string name="delete_phase_title">Delete phase?</string>
+    <string name="delete_lesson_title">Delete lesson?</string>
+    <string name="delete_phase_message">This also deletes its lessons.</string>
+    <string name="no_link">No link yet. Add a URL for this lesson.</string>
+    <string name="no_phases">No phases yet.</string>
+    <string name="link_error">Could not open that link.</string>
+    <string name="mark_lesson_done">Mark done</string>
+    <string name="mark_lesson_undone">Mark not done</string>
+    <string name="lesson_done">Lesson is done</string>
+    <string name="phase_options">Phase options</string>
+    <string name="lesson_options">Lesson options</string>
+
+    <!-- Deadlines -->
+    <string name="deadlines">Deadlines</string>
+    <string name="list">List</string>
+    <string name="timeline">Timeline</string>
+    <string name="days_left">days left</string>
+    <string name="add_deadline">Add deadline</string>
+    <string name="edit_deadline">Edit deadline</string>
+    <string name="deadline_title">Title</string>
+    <string name="deadline_date">Date</string>
+    <string name="deadline_type">Type</string>
+    <string name="type_exam">Exam</string>
+    <string name="type_assignment">Assignment</string>
+    <string name="type_project">Project</string>
+    <string name="type_other">Other</string>
+    <string name="delete_deadline_title">Delete deadline?</string>
+    <string name="delete_deadline_message">This removes the deadline and its reminders.</string>
+    <string name="mark_deadline_done">Mark done</string>
+    <string name="mark_deadline_undone">Mark not done</string>
+    <string name="deadline_done">Completed</string>
+    <string name="today_is">Today</string>
+
+    <!-- Speaking -->
+    <string name="speaking">Speaking</string>
+    <string name="todays_prompt">TODAY\'S PROMPT</string>
+    <string name="prompt_default">Explain what you learned today in simple words.</string>
+    <string name="saved_clips">SAVED CLIPS</string>
+    <string name="no_clips">No clips yet.</string>
+    <string name="clip_name">Clip %1$d</string>
+    <string name="record_hint">Tap to record a video clip.</string>
+    <string name="recording_hint">Recording video and audio. Tap to stop.</string>
+    <string name="rec">REC</string>
+    <string name="storage">STORAGE</string>
+    <string name="backup_to_drive">Back up videos to Google Drive</string>
+    <string name="clips_local_only">Clips stay on this phone only.</string>
+    <string name="upload_over">Upload over</string>
+    <string name="upload_wifi_only">Wi-Fi only</string>
+    <string name="upload_wifi_mobile">Wi-Fi + mobile data</string>
+    <string name="upload_ask_mobile">Ask before mobile data</string>
+    <string name="mobile_used">Mobile data used for backup this month: %1$s MB</string>
+    <string name="monthly_cap">Monthly mobile data cap</string>
+    <string name="no_cap">No cap</string>
+    <string name="cap_reached">Monthly cap reached. Uploads wait for Wi-Fi until next month.</string>
+    <string name="cap_value">%1$d MB</string>
+    <string name="google_storage_used">Google storage used</string>
+    <string name="storage_status_ok">Uploads pause automatically at 90%, before the limit.</string>
+    <string name="storage_status_warn">Storage is over 80%. Uploads pause at 90%.</string>
+    <string name="storage_status_paused">Uploads paused at 90%. Delete old clips or free space to continue.</string>
+    <string name="storage_unlimited">%1$s used</string>
+    <string name="storage_of_limit">%1$s of %2$s GB</string>
+    <string name="storage_used_only">%1$s GB used</string>
+    <string name="queued">Queued</string>
+    <string name="recording_error">Could not record. Check camera and microphone access.</string>
+    <string name="drive_signin_failed">Google Drive sign-in was cancelled or failed.</string>
+    <string name="storage_loading">Checking Google Drive…</string>
+    <string name="storage_unknown">Storage usage unavailable.</string>
+    <string name="refresh">Refresh</string>
+    <string name="uploading">Uploading</string>
+    <string name="waiting_wifi_label">Waiting for Wi-Fi</string>
+    <string name="paused_storage">Paused</string>
+    <string name="upload_failed">Failed</string>
+    <string name="weekly_review">WEEKLY REVIEW CHECKLIST</string>
+    <string name="weekly_review_hint">Watch one clip. Pick one thing to fix.</string>
+    <string name="check_eye_contact">Eye contact</string>
+    <string name="check_posture">Posture</string>
+    <string name="check_hand_movement">Hand movement</string>
+    <string name="check_facial_expression">Facial expression</string>
+    <string name="check_filler_words">Filler words</string>
+    <string name="check_pace">Pace</string>
+    <string name="delete_clip_title">Delete clip?</string>
+    <string name="delete_clip_message">This removes the clip from this phone.</string>
+    <string name="delete_also_drive">Also delete from Google Drive</string>
+    <string name="clip_missing">This clip file is missing.</string>
+
+    <!-- Permissions and notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_message">Level Up uses notifications for your daily reminder, deadline alerts and backup progress. You can turn them off any time.</string>
+    <string name="allow">Allow</string>
+    <string name="not_now">Not now</string>
+    <string name="camera_rationale_title">Camera and microphone</string>
+    <string name="camera_rationale_message">Speaking practice records a 5 minute clip with the front camera so you can review eye contact, posture and pace. Clips stay on this phone unless you turn on Drive backup.</string>
+    <string name="enable_camera">Enable camera</string>
+    <string name="camera_permission_denied">Camera and microphone access is needed to record a clip.</string>
+    <string name="camera_open_settings">Open settings</string>
+    <string name="open_settings">Open app settings</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="reminders">Reminders</string>
+    <string name="daily_reminder">Daily reminder</string>
+    <string name="reminder_time">Reminder time</string>
+    <string name="exam_settings">Exam mode</string>
+    <string name="exam_auto_threshold">Start exam mode %1$d days before an exam</string>
+    <string name="reset_exam_auto">Reset exam mode to auto</string>
+    <string name="exam_override_on">Exam mode is forced on.</string>
+    <string name="exam_override_off">Exam mode is forced off.</string>
+    <string name="prompts_title">Speaking prompts</string>
+    <string name="prompt_text">Prompt</string>
+    <string name="add_prompt">Add prompt</string>
+    <string name="edit_prompt">Edit prompt</string>
+    <string name="mobile_data">Mobile data</string>
+    <string name="monthly_cap_row">Monthly cap</string>
+    <string name="no_cap_row">No cap</string>
+    <string name="backup">Google Drive</string>
+    <string name="backup_enabled">Backup on</string>
+    <string name="backup_disabled">Backup off</string>
+    <string name="mobile_settings_note">Backup uploads: %1$s.</string>
+    <string name="about">About</string>
+    <string name="about_text">Level Up keeps everything on this phone. Drive backup is optional and only uploads clips you record.</string>
+    <string name="version_name">Version %1$s</string>
+    <string name="back">Back</string>
+
+    <!-- Notification channels and content -->
+    <string name="channel_reminders">Reminders</string>
+    <string name="channel_reminders_desc">Daily Minimum reminder and deadline alerts.</string>
+    <string name="channel_uploads">Backups</string>
+    <string name="channel_uploads_desc">Clip upload progress and waiting-for-Wi-Fi alerts.</string>
+    <string name="reminder_title">Minimum still open</string>
+    <string name="reminder_text">One small task is enough. Keep the streak alive.</string>
+    <string name="deadline_in_days">%1$s in %2$d days</string>
+    <string name="deadline_tomorrow">%1$s is tomorrow</string>
+    <string name="deadline_today">%1$s is today</string>
+    <string name="upload_waiting_title">Clip waiting for Wi-Fi</string>
+    <string name="upload_waiting_text">Connect to Wi-Fi to back up your clip, or upload it with mobile data.</string>
+    <string name="upload_now">Upload now</string>
+    <string name="wait_for_wifi">Wait for Wi-Fi</string>
+    <string name="upload_done_title">Backup complete</string>
+    <string name="upload_done_text">Your clip is safely in Google Drive.</string>
+
+    <!-- Widgets -->
+    <string name="widget_coming_up">Coming up</string>
+    <string name="widget_today">Today tasks</string>
+    <string name="widget_activity">Activity</string>
+    <string name="widget_streak_next">Streak and next step</string>
+    <string name="widget_coming_up_desc">The nearest deadlines.</string>
+    <string name="widget_today_desc">Today’s tasks. Tap to tick them off.</string>
+    <string name="widget_activity_desc">Tasks completed over the last 7 days or 4 weeks.</string>
+    <string name="widget_streak_next_desc">Your streak and the next lesson.</string>
+    <string name="widget_activity_label">ACTIVITY</string>
+    <string name="widget_coming_up_label">COMING UP</string>
+    <string name="widget_no_tasks">No tasks</string>
+    <string name="widget_next_step">NEXT STEP</string>
+    <string name="widget_7days">7 days</string>
+    <string name="widget_4weeks">4 weeks</string>
+    <string name="of_tasks_done_average">of tasks done, average</string>
+    <string name="widget_min">Min</string>
+    <string name="widget_norm">Norm</string>
+    <string name="widget_bonus">Bonus</string>
+    <string name="widget_no_deadline">No deadlines</string>
+    <string name="widget_all_done">All done</string>
+    <string name="widget_open_today">Open Today</string>
+    <string name="widget_open_deadlines">Open Deadlines</string>
+    <string name="widget_toggle_range">Switch chart range</string>
+    <string name="widget_task_done">Done: %1$s</string>
+    <string name="widget_task_open">Not done: %1$s</string>
+
+    <!-- Accessibility -->
+    <string name="cd_settings">Settings</string>
+    <string name="cd_add">Add</string>
+    <string name="cd_prev_month">Previous month</string>
+    <string name="cd_next_month">Next month</string>
+    <string name="cd_play">Play clip</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_open_link">Open lesson link</string>
+    <string name="cd_check">Toggle done</string>
+    <string name="cd_record">Record</string>
+    <string name="cd_stop">Stop recording</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_expand_phase">Expand or collapse phase</string>
+    <string name="cd_clip_menu">Clip options</string>
+
+    <!-- Date formats are produced in code with Locale.ENGLISH -->
+    <string name="prompt_two">What did you ship or improve today?</string>
+    <string name="prompt_three">Explain one idea from your roadmap like I am new to it.</string>
+    <string name="prompt_four">Describe a bug you hit and how you found it.</string>
+    <string name="prompt_five">Talk through your next project for two minutes.</string>
+</resources>

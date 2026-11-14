@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.LevelUp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lv_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">@color/lv_accent</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

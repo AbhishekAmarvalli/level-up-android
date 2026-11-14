@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level Up - interactive UI prototype (Oppo K13x, 720x1604, 20:9)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--surface-1:#1a1d24;--border-strong:#3a3f4b;--border-stronger:#8a909c;--font-sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-mono:ui-monospace,"JetBrains Mono",Menlo,Consolas,monospace}
+body{margin:0;background:#111318;color:#E8EAED;font-family:var(--font-sans);display:flex;justify-content:center;padding:20px}
+.wrap{background:var(--surface-1);border-radius:12px;padding:12px;width:360px;max-width:100%}
+button{background:transparent;color:#E8EAED;border:0.5px solid var(--border-strong);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px}
+@keyframes glow{0%{box-shadow:inset 0 0 0 rgba(255,59,59,0)}30%{box-shadow:inset 0 0 40px rgba(255,59,59,.55)}100%{box-shadow:inset 0 0 0 rgba(255,59,59,0)}}
+@keyframes fall{to{transform:translateY(760px) rotate(360deg);opacity:0}}
+@keyframes pop{0%{opacity:0;transform:scale(.8)}20%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+#screen::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+<button id="vApp" onclick="sv('app')">App</button>
+<button id="vHome" onclick="sv('home')">Home screen</button>
+<span style="margin-left:auto;font-size:11px;color:#9AA0A6;">720 x 1604, 20:9</span>
+</div>
+<div id="phone" style="width:336px;max-width:100%;aspect-ratio:720/1604;margin:0 auto;background:#0F1115;border-radius:28px;border:0.5px solid var(--border-strong);display:flex;flex-direction:column;overflow:hidden;position:relative;color:#E8EAED;font-family:var(--font-sans);">
+<div style="height:26px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:11px;color:#9AA0A6;"><span>9:41</span><span style="width:9px;height:9px;border-radius:50%;background:#000;border:0.5px solid #2A2F3A;"></span><span>5G</span></div>
+<div id="screen" style="flex:1;overflow-y:auto;padding:4px 14px 12px;"></div>
+<div id="tabs" style="flex:none;display:flex;justify-content:space-around;border-top:0.5px solid #2A2F3A;padding:8px 0 12px;"></div>
+</div>
+</div>
+<script>
+var S={view:'app',tab:'today',bad:false,exam:true,all:false,open:{},dl:'list',rec:false,el:0,rng:'7d',cloud:true,wifi:true,used:9.2,
+clips:[{n:'Clip 2',s:48},{n:'Clip 1',s:31}],
+tasks:[{id:1,t:'20 min AI learning',tier:0,done:true,ai:true},{id:2,t:'College study',tier:0,done:false},{id:3,t:'Speaking practice 10 min',tier:0,done:false},{id:4,t:'1 lesson + exercise',tier:1,done:false,ai:true},{id:5,t:'Workout',tier:1,done:false},{id:6,t:'Project time',tier:2,done:false,ai:true}]};
+function L(a){return a.map(function(x){return {t:x[0],d:x[1]}})}
+S.ph=[{n:'Foundations',L:L([['Python basics',1],['Functions and classes',0],['APIs and JSON',0],['Git basics',0]])},
+{n:'LLM basics',L:L([['How LLMs work',0],['Prompting',0],['Calling an LLM API',0],['Project 1: chatbot',0]])},
+{n:'RAG',L:L([['Embeddings',0],['Vector search',0],['Chunking',0],['Project 2: RAG app',0]])},
+{n:'Agents',L:L([['Tool use',0],['Multi-step agents',0],['Project 3: agent',0]])},
+{n:'Shipping',L:L([['FastAPI',0],['Docker',0],['Cloud deploy',0],['Evaluating outputs',0]])},
+{n:'ML and PyTorch',L:L([['PyTorch basics',0],['Train a small model',0]])},
+{n:'Portfolio',L:L([['GitHub and READMEs',0],['2-minute project demos',0]])}];
+var DL=[{t:'DSA exam',s:'Wed, 18 Nov',n:4},{t:'Assignment 2',s:'Mon, 23 Nov',n:9},{t:'RAG project demo',s:'Sat, 5 Dec',n:21}];
+var iv=null,tick=0;
+var M='font-family:var(--font-mono);';
+function chk(d,s){s=s||20;return d?'<span style="width:'+s+'px;height:'+s+'px;border-radius:6px;background:#FF3B3B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:'+(s-6)+'px;flex:none"><i class="ti ti-check"></i></span>':'<span style="width:'+s+'px;height:'+s+'px;border-radius:6px;border:1.5px solid #9AA0A6;flex:none"></span>'}
+function lab0(s){return '<div style="'+M+'font-size:11px;color:#9AA0A6">'+s+'</div>'}
+function lab(s){return '<div style="'+M+'font-size:11px;color:#9AA0A6;margin:12px 0 6px">'+s+'</div>'}
+function card(h,x){return '<div style="background:#171A21;border-radius:14px;padding:12px;'+(x||'')+'">'+h+'</div>'}
+function wg(h,x){return '<div style="background:#0F1115;border-radius:20px;padding:14px;margin-bottom:10px;border:0.5px solid #2A2F3A;'+(x||'')+'">'+h+'</div>'}
+function big(x){return '<div style="'+M+'font-size:30px;color:#FF3B3B;line-height:1.1;margin-top:2px">'+x+'</div>'}
+function dot(o){return '<span style="width:9px;height:9px;border-radius:50%;background:'+(o?'#FF3B3B':'#2A2F3A')+'"></span>'}
+function sw(on,fn){return '<span onclick="'+fn+'" style="cursor:pointer;width:34px;height:20px;border-radius:10px;background:'+(on?'#E8EAED':'#2A2F3A')+';position:relative;display:inline-block;flex:none"><span style="position:absolute;top:2px;left:'+(on?16:2)+'px;width:16px;height:16px;border-radius:50%;background:'+(on?'#0F1115':'#9AA0A6')+'"></span></span>'}
+function fmt(s){return ('0'+Math.floor(s/60)).slice(-2)+':'+('0'+s%60).slice(-2)}
+function minDone(){return S.tasks.filter(function(t){return t.tier===0}).every(function(t){return t.done})}
+function vis(){return S.tasks.filter(function(t){if(S.bad&&t.tier>0)return false;if(S.exam&&t.ai&&t.tier>0)return false;return true})}
+function tname(t){return S.exam&&t.id===1?'10 min AI learning':t.t}
+function nextL(){for(var i=0;i<S.ph.length;i++){var p=S.ph[i];for(var j=0;j<p.L.length;j++){if(!p.L[j].d)return {pi:i,li:j,t:p.L[j].t,pn:p.n}}}return null}
+function today(){var n=nextL(),all=minDone(),h='';
+h+='<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0 10px"><span style="'+M+'font-size:16px">Sat, 14 Nov</span>'+(S.exam?'<span style="'+M+'font-size:11px;color:#9AA0A6;border:0.5px solid #2A2F3A;border-radius:6px;padding:2px 6px">EXAM MODE</span>':'')+'</div>';
+h+=card(lab0('NEXT STEP')+(n?'<div style="'+M+'font-size:15px;margin:4px 0 2px">'+n.t+'</div><div style="font-size:12px;color:#9AA0A6">'+n.pn+'</div><div style="display:flex;gap:8px;margin-top:10px"><span onclick="markDone()" style="cursor:pointer;background:#E8EAED;color:#0F1115;font-size:12px;padding:6px 12px;border-radius:8px">Mark done</span><span onclick="skipL()" style="cursor:pointer;color:#9AA0A6;font-size:12px;padding:6px 12px;border-radius:8px;border:0.5px solid #2A2F3A">Skip for now</span></div>':'<div style="font-size:14px;margin-top:4px">All lessons done.</div>'));
+var dots='';for(var i=0;i<6;i++)dots+=dot(1);dots+=dot(all);
+h+='<div style="display:flex;gap:10px;margin:10px 0">'+card(lab0('STREAK')+big(all?7:6)+'<div style="display:flex;gap:4px;margin-top:6px">'+dots+'</div>','flex:1')+card(lab0('NEXT DEADLINE')+big('4d')+'<div style="font-size:12px;margin-top:6px">DSA exam</div>','flex:1')+'</div>';
+h+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Bad day mode</span>'+sw(S.bad,'tb()')+'</div><div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:8px"><span>Exam mode (auto, exam in 4 days)</span>'+sw(S.exam,'te()')+'</div>';
+var v=vis();['MINIMUM','NORMAL','BONUS'].forEach(function(g,k){var r=v.filter(function(t){return t.tier===k});if(!r.length)return;h+=lab(g);r.forEach(function(t){h+='<div onclick="tg('+t.id+')" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 12px;background:#171A21;border-radius:12px;margin-bottom:6px">'+chk(t.done)+'<span style="font-size:14px;'+(t.done?'color:#9AA0A6;text-decoration:line-through':'')+'">'+tname(t)+'</span></div>'})});
+h+='<div style="font-size:11px;color:#9AA0A6;margin-top:8px">Real app: swipe right to complete, swipe left to skip, long-press to edit.</div>';
+return h}
+function road(){var n=nextL(),h='<div style="display:flex;justify-content:space-between;align-items:center;margin:2px 0 12px"><span style="'+M+'font-size:16px">Roadmap</span><span style="display:flex;align-items:center;gap:8px;font-size:12px;color:#9AA0A6">Expand all '+sw(S.all,'ta()')+'</span></div>';
+S.ph.forEach(function(p,i){var dn=p.L.filter(function(l){return l.d}).length,pc=Math.round(dn/p.L.length*100),cur=n&&n.pi===i,op=S.all?true:(i in S.open?S.open[i]:cur),full=dn===p.L.length;
+h+='<div style="position:relative;margin-left:9px;padding-left:20px;border-left:1px solid #2A2F3A;padding-bottom:12px"><span style="position:absolute;left:-10px;top:0;width:19px;height:19px;border-radius:50%;background:'+(full?'#FF3B3B':'#0F1115')+';border:1.5px solid '+(full?'#FF3B3B':cur?'#E8EAED':'#2A2F3A')+';color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center">'+(full?'<i class="ti ti-check"></i>':'')+'</span><div onclick="tp('+i+')" style="cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center"><span style="'+M+'font-size:14px">'+p.n+'</span><span style="font-size:12px;color:#9AA0A6"><span style="'+M+'font-size:13px;color:#FF3B3B">'+pc+'%</span> <i class="ti ti-chevron-'+(op?'up':'down')+'"></i></span></div><div style="height:4px;background:#2A2F3A;border-radius:2px;margin-top:6px"><div style="width:'+pc+'%;height:100%;background:#E8EAED;border-radius:2px"></div></div><div style="font-size:11px;color:#9AA0A6;margin-top:3px">'+dn+' of '+p.L.length+' lessons</div></div>';
+if(op)p.L.forEach(function(l,j){var isN=cur&&n.li===j;h+='<div style="display:flex;align-items:center;gap:8px;padding:8px;margin-top:4px;border-radius:10px;'+(isN?'background:#171A21':'')+'">'+(l.d?'<span style="color:#FF3B3B;font-size:16px"><i class="ti ti-check"></i></span>':'<span style="width:16px;height:16px;border-radius:50%;border:1.5px solid '+(isN?'#E8EAED':'#2A2F3A')+';flex:none"></span>')+'<span style="flex:1;font-size:13px;'+(l.d?'color:#9AA0A6;text-decoration:line-through':'')+'">'+l.t+'</span>'+(isN?'<span style="'+M+'font-size:11px;color:#9AA0A6">NEXT</span>':'')+'<i class="ti ti-external-link" style="color:#9AA0A6;font-size:15px"></i></div>'});
+h+='</div>'});
+return h}
+function cal(){var g='<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:12px;row-gap:2px">';'SMTWTFS'.split('').forEach(function(w){g+='<span style="color:#9AA0A6;font-size:11px;'+M+'">'+w+'</span>'});
+for(var d=1;d<=30;d++){var dl=d===18||d===23,td=d===14;g+='<span style="height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;'+(td?'border:1px solid #9AA0A6;border-radius:8px;':'')+'">'+d+'<span style="width:5px;height:5px;border-radius:50%;margin-top:1px;background:'+(dl?'#FF3B3B':'transparent')+'"></span></span>'}return g+'</div>'}
+function cd(n){return '<div style="text-align:right;flex:none"><div style="'+M+'font-size:24px;color:#FF3B3B;line-height:1">'+n+'</div><div style="font-size:11px;color:#9AA0A6">days left</div></div>'}
+function dls(){var h='<div style="'+M+'font-size:16px;margin:2px 0 10px">Deadlines</div>';
+h+=card('<div style="'+M+'font-size:13px;margin-bottom:8px">November 2026</div>'+cal());
+h+='<div style="display:flex;gap:6px;margin:12px 0 8px">'+['list','timeline'].map(function(k){return '<span onclick="sd(\''+k+'\')" style="cursor:pointer;font-size:12px;padding:4px 10px;border-radius:12px;border:0.5px solid '+(S.dl===k?'#E8EAED':'#2A2F3A')+';color:'+(S.dl===k?'#E8EAED':'#9AA0A6')+'">'+(k==='list'?'List':'Timeline')+'</span>'}).join('')+'</div>';
+if(S.dl==='list'){DL.forEach(function(d){h+='<div style="display:flex;justify-content:space-between;align-items:center;background:#171A21;border-radius:12px;padding:12px;margin-bottom:6px"><div><div style="font-size:14px">'+d.t+'</div><div style="'+M+'font-size:12px;color:#9AA0A6">'+d.s+'</div></div>'+cd(d.n)+'</div>'})}
+else{DL.forEach(function(d){h+='<div style="position:relative;margin-left:6px;padding:0 0 14px 18px;border-left:1px solid #2A2F3A;display:flex;justify-content:space-between;align-items:flex-start"><span style="position:absolute;left:-5px;top:3px;width:9px;height:9px;border-radius:50%;background:#FF3B3B"></span><div><div style="'+M+'font-size:12px;color:#9AA0A6">'+d.s+'</div><div style="font-size:14px">'+d.t+'</div></div>'+cd(d.n)+'</div>'})}
+h+=lab('DONE')+'<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#171A21;border-radius:12px;color:#9AA0A6;font-size:13px">'+chk(1,18)+'<span style="flex:1">Quiz 1</span><span style="'+M+'font-size:12px">6 Nov</span></div>';
+return h}
+function stor(){var pct=Math.round(S.used/15*100),warn=pct>=80,pause=pct>=90;
+return lab('STORAGE')+card('<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span>Back up videos to Google Drive</span>'+sw(S.cloud,'tc()')+'</div>'+(S.cloud?'<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-top:8px"><span>Upload on Wi-Fi only</span>'+sw(S.wifi,'tw()')+'</div><div style="margin-top:10px;display:flex;justify-content:space-between;font-size:12px"><span style="color:#9AA0A6">Google storage used</span><span style="'+M+'">'+S.used.toFixed(1)+' of 15 GB</span></div><div style="height:5px;background:#2A2F3A;border-radius:3px;margin-top:5px"><div style="width:'+pct+'%;height:100%;background:#E8EAED;border-radius:3px"></div></div><div style="font-size:12px;color:#9AA0A6;margin-top:8px">'+(pause?'Uploads paused at 90%. Delete old clips or free space to continue.':warn?'Storage is over 80%. Uploads pause at 90%.':'Uploads pause automatically at 90%, before the limit.')+'</div><span onclick="su()" style="cursor:pointer;display:inline-block;margin-top:8px;font-size:12px;padding:4px 10px;border-radius:12px;border:0.5px solid #2A2F3A;color:#9AA0A6">Demo: simulate usage</span>':'<div style="font-size:12px;color:#9AA0A6;margin-top:8px">Clips stay on this phone only.</div>'))}
+function speak(){var h='<div style="'+M+'font-size:16px;margin:2px 0 10px">Speaking</div>';
+h+=card(lab0('TODAY\'S PROMPT')+'<div style="font-size:14px;margin:6px 0 6px">Explain what you learned today in simple words.</div><div id="tm" style="'+M+'font-size:26px;color:#FF3B3B">'+fmt(S.rec?300-S.el:300)+'</div>');
+h+='<div style="position:relative;height:150px;border-radius:14px;background:#171A21;margin:10px 0;display:flex;align-items:center;justify-content:center;color:#2A2F3A;font-size:64px"><i class="ti ti-user"></i><span style="position:absolute;left:10px;top:8px;font-size:11px;color:#9AA0A6">Front camera preview</span>'+(S.rec?'<span style="position:absolute;right:10px;top:8px;'+M+'font-size:12px;color:#E8EAED"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#FF3B3B;margin-right:5px"></span>REC</span>':'')+'</div>';
+h+='<div style="display:flex;justify-content:center;margin:8px 0"><span onclick="rec()" style="cursor:pointer;width:76px;height:76px;border-radius:50%;background:#171A21;border:1.5px solid #2A2F3A;display:flex;align-items:center;justify-content:center;font-size:32px;color:#FF3B3B"><i class="ti ti-'+(S.rec?'player-stop':'video')+'"></i></span></div>';
+var b='';for(var i=0;i<30;i++)b+='<span style="width:3px;height:6px;border-radius:2px;background:#9AA0A6"></span>';
+h+='<div id="wf" style="display:flex;align-items:center;justify-content:center;gap:3px;height:40px">'+b+'</div><div style="text-align:center;font-size:12px;color:#9AA0A6;margin-top:2px">'+(S.rec?'Recording video and audio. Tap to stop.':'Tap to record a video clip.')+'</div>';
+h+=lab('SAVED CLIPS');
+if(!S.clips.length)h+='<div style="font-size:12px;color:#9AA0A6">No clips yet.</div>';
+var up=S.cloud&&S.used<13.5;
+S.clips.forEach(function(c,i){h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;background:#171A21;border-radius:12px;margin-bottom:6px;font-size:13px"><span style="width:40px;height:40px;border-radius:8px;background:#0F1115;display:flex;align-items:center;justify-content:center;font-size:18px;color:#9AA0A6"><i class="ti ti-player-play"></i></span><span style="flex:1">'+c.n+'</span><span style="'+M+'font-size:12px;color:#9AA0A6">'+fmt(c.s)+'</span>'+(S.cloud?'<i class="ti ti-cloud-'+(up?'check':'off')+'" style="font-size:16px;color:#9AA0A6"></i>':'')+'<i class="ti ti-trash" onclick="dc('+i+')" style="cursor:pointer;font-size:17px;color:#9AA0A6"></i></div>'});
+h+=stor();
+h+=lab('WEEKLY REVIEW CHECKLIST')+card('<div style="font-size:12px;color:#9AA0A6;margin-bottom:8px">Watch one clip. Pick one thing to fix.</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+['Eye contact','Posture','Hand movement','Facial expression','Filler words','Pace'].map(function(x){return '<span style="font-size:12px;padding:4px 10px;border-radius:12px;border:0.5px solid #2A2F3A">'+x+'</span>'}).join('')+'</div>');
+return h}
+function actW(){var v=vis(),dn=v.filter(function(x){return x.done}).length,tp=v.length?Math.round(dn/v.length*100):0,w=S.rng==='7d',
+a=w?[70,100,85,60,100,90,tp]:[64,72,81,Math.round((70+100+85+60+100+90+tp)/7)],
+lb=w?['S','M','T','W','T','F','S']:['W1','W2','W3','W4'],
+av=Math.round(a.reduce(function(s,x){return s+x},0)/a.length),b='';
+a.forEach(function(x,i){b+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px"><div style="width:'+(w?14:28)+'px;height:'+Math.max(3,Math.round(x*.55))+'px;border-radius:4px;background:'+(i===a.length-1?'#E8EAED':'#5F6673')+'"></div><span style="font-size:11px;color:#9AA0A6">'+lb[i]+'</span></div>'});
+var tg2=['7d','4w'].map(function(k){return '<span onclick="rg(\''+k+'\')" style="cursor:pointer;font-size:11px;padding:2px 8px;border-radius:10px;border:0.5px solid '+(S.rng===k?'#E8EAED':'#2A2F3A')+';color:'+(S.rng===k?'#E8EAED':'#9AA0A6')+'">'+(k==='7d'?'7 days':'4 weeks')+'</span>'}).join('');
+return wg('<div style="display:flex;justify-content:space-between;align-items:center">'+lab0('ACTIVITY')+'<span style="display:flex;gap:4px">'+tg2+'</span></div><div style="display:flex;align-items:baseline;gap:6px;margin:6px 0 8px"><span style="'+M+'font-size:28px;color:#FF3B3B">'+av+'%</span><span style="font-size:12px;color:#9AA0A6">of tasks done, average</span></div><div style="display:flex;align-items:flex-end;gap:4px;height:80px;border-bottom:0.5px solid #2A2F3A">'+b+'</div>')}
+function home(){var v=vis(),n=nextL(),all=minDone();
+var h='<div style="background:#1B2230;margin:-4px -14px -12px;padding:10px 14px 14px;min-height:640px"><div style="font-size:11px;color:#9AA0A6;text-align:center;margin-bottom:10px">Home screen preview</div>';
+h+=wg(lab0('COMING UP')+'<div style="display:flex;align-items:baseline;gap:8px;margin:2px 0 6px"><span style="'+M+'font-size:56px;color:#FF3B3B;line-height:1">4</span><span style="'+M+'font-size:13px;color:#9AA0A6">days</span></div><div style="font-size:15px">DSA exam</div><div style="'+M+'font-size:12px;color:#9AA0A6;margin:2px 0 8px">Wed, 18 Nov</div><div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:0.5px solid #2A2F3A"><span>Assignment 2</span><span style="'+M+'color:#FF3B3B">9d</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-top:0.5px solid #2A2F3A"><span>RAG project demo</span><span style="'+M+'color:#FF3B3B">21d</span></div>');
+var t='';v.forEach(function(x){t+='<div onclick="tg('+x.id+')" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">'+chk(x.done,16)+'<span style="'+(x.done?'color:#9AA0A6;text-decoration:line-through':'')+'">'+tname(x)+'</span></div>'});
+h+=wg(lab0('TODAY')+'<div style="margin-top:4px">'+t+'</div>');
+h+=actW();
+var pr='';['Min','Norm','Bonus'].forEach(function(g,k){var r=v.filter(function(x){return x.tier===k});if(!r.length)return;var d=r.filter(function(x){return x.done}).length;pr+='<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-top:5px"><span style="width:34px;color:#9AA0A6">'+g+'</span><div style="flex:1;height:5px;background:#2A2F3A;border-radius:3px"><div style="width:'+Math.round(d/r.length*100)+'%;height:100%;background:#E8EAED;border-radius:3px"></div></div></div>'});
+var dots='';for(var i=0;i<6;i++)dots+=dot(1);dots+=dot(all);
+h+='<div style="display:flex;gap:10px">'+wg(lab0('STREAK')+big(all?7:6)+'<div style="display:flex;gap:3px;margin-top:4px">'+dots+'</div>'+pr,'flex:1;margin-bottom:0;padding:12px')+wg(lab0('NEXT STEP')+(n?'<div style="'+M+'font-size:13px;margin:6px 0 4px">'+n.t+'</div><div style="font-size:11px;color:#9AA0A6">'+n.pn+'</div>':'<div style="font-size:12px">All done</div>'),'flex:1;margin-bottom:0;padding:12px')+'</div></div>';
+return h}
+function tabs(){var T=[['today','home','Today'],['road','route','Roadmap'],['dl','calendar','Deadlines'],['speak','video','Speaking']];document.getElementById('tabs').innerHTML=T.map(function(t){return '<div onclick="st(\''+t[0]+'\')" style="cursor:pointer;text-align:center;color:'+(S.tab===t[0]?'#FF3B3B':'#9AA0A6')+'"><i class="ti ti-'+t[1]+'" style="font-size:22px"></i><div style="font-size:11px">'+t[2]+'</div></div>'}).join('')}
+function render(){var sc=document.getElementById('screen'),tb=document.getElementById('tabs');
+if(S.view==='home'){sc.innerHTML=home();tb.style.display='none'}
+else{tb.style.display='flex';sc.innerHTML=({today:today,road:road,dl:dls,speak:speak})[S.tab]();tabs()}
+document.getElementById('vApp').style.borderColor=S.view==='app'?'var(--border-stronger)':'';
+document.getElementById('vHome').style.borderColor=S.view==='home'?'var(--border-stronger)':''}
+function wave(){var w=document.getElementById('wf');if(!w)return;for(var i=0;i<w.children.length;i++){var c=w.children[i];c.style.height=(S.rec?6+Math.random()*30:6)+'px';c.style.background=S.rec?'#E8EAED':'#9AA0A6'}}
+function rec(){if(!S.rec){S.rec=true;S.el=0;tick=0;iv=setInterval(function(){tick++;if(tick%7==0)S.el++;if(S.el>=300){rec();return}wave();var t=document.getElementById('tm');if(t)t.textContent=fmt(300-S.el)},150)}else{clearInterval(iv);S.rec=false;if(S.el>0)S.clips.unshift({n:'Clip '+(S.clips.length+1),s:S.el})}render()}
+function party(){var ph=document.getElementById('phone'),o=document.createElement('div'),c='',k=['#FF3B3B','#E8EAED','#9AA0A6'];o.style.cssText='position:absolute;inset:0;pointer-events:none;border-radius:28px;overflow:hidden;animation:glow 2s ease-out forwards';
+for(var i=0;i<20;i++)c+='<span style="position:absolute;top:-10px;left:'+(Math.random()*100)+'%;width:6px;height:10px;background:'+k[i%3]+';animation:fall '+(1+Math.random())+'s ease-in '+(Math.random()*.4)+'s forwards"></span>';
+o.innerHTML=c+'<div style="position:absolute;top:42%;left:0;right:0;text-align:center;'+M+'font-size:14px;color:#E8EAED;animation:pop 2s forwards">Minimum done.<br><span style="color:#FF3B3B;font-size:30px">7</span> day streak</div>';ph.appendChild(o);setTimeout(function(){o.remove()},2200)}
+function tg(id){var was=minDone();S.tasks.forEach(function(t){if(t.id===id)t.done=!t.done});render();if(!was&&minDone())party()}
+function markDone(){var n=nextL();if(n)S.ph[n.pi].L[n.li].d=1;render()}
+function skipL(){var n=nextL();if(n){var p=S.ph[n.pi];p.L.push(p.L.splice(n.li,1)[0])}render()}
+function tb(){S.bad=!S.bad;render()}
+function te(){S.exam=!S.exam;render()}
+function ta(){S.all=!S.all;render()}
+function tp(i){var n=nextL(),cur=n&&n.pi===i,op=S.all?true:(i in S.open?S.open[i]:cur);S.all=false;S.open[i]=!op;render()}
+function sd(k){S.dl=k;render()}
+function dc(i){S.clips.splice(i,1);render()}
+function st(k){S.tab=k;render()}
+function sv(v){S.view=v;render()}
+function rg(k){S.rng=k;render()}
+function tc(){S.cloud=!S.cloud;render()}
+function tw(){S.wifi=!S.wifi;render()}
+function su(){S.used=S.used<12?12.4:(S.used<13.5?13.8:9.2);render()}
+render();
+</script>
+</body>
+</html>
