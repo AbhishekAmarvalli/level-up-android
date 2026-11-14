@@ -10,12 +10,27 @@ Google Drive backup.
 
 ---
 
+## Download the APK
+
+[![Download Level Up 1.0 APK](https://img.shields.io/badge/Download_Level_Up_1.0-APK-E24B4B?style=for-the-badge&logo=android&logoColor=white)](https://github.com/AbhishekAmarvalli/level-up-android/raw/main/LevelUp-1.0-debug.apk)
+
+**Tap the button above to download [`LevelUp-1.0-debug.apk`](./LevelUp-1.0-debug.apk).**
+
+- **Location in this project:** `LevelUp-1.0-debug.apk` (repository root)
+- **Requirements:** Android 8.0 or newer (`minSdk 26`), about 16 MB
+- **SHA-256:** `9bd70665378e1c3e85979a6080460d860726754637a73ebb40a54a5b6e9749b7`
+- This is a debug build signed with the debug keystore. When opening the file, allow your
+  browser or file manager to install unknown apps if Android asks.
+
+---
+
 ## 1. Deliverables
 
 | Item | Path |
 | --- | --- |
 | Complete Android Studio project | repository root |
-| Debug APK | `app/build/outputs/apk/debug/app-debug.apk` |
+| Debug APK (download) | `LevelUp-1.0-debug.apk` |
+| Fresh Gradle build output | `app/build/outputs/apk/debug/app-debug.apk` |
 | Source | `app/src/main/java/com/levelup/app` |
 | Design resources | `app/src/main/res` |
 
@@ -42,6 +57,8 @@ export JAVA_HOME="$PWD/.toolchain/jdk/jdk-17.0.21+9"   # or your own JDK 17
 ./gradlew assembleDebug
 
 # install on a connected phone (USB debugging enabled)
+adb install -r LevelUp-1.0-debug.apk
+# or, after rebuilding:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
